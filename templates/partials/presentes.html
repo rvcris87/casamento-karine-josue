@@ -1,0 +1,38 @@
+<section class="section section-light" id="presentes">
+    <div class="section-header">
+        <p class="eyebrow">Lista de presentes</p>
+        <h2>Missão: vida de casados</h2>
+        <p>
+            Criamos uma lista simbólica para quem quiser nos presentear com carinho,
+            humor e uma ajudinha no começo da nossa vida juntos 💙
+        </p>
+    </div>
+
+    <div class="presentes-grid">
+        {% for presente in presentes %}
+        <article class="presente-card">
+            <img src="{{ presente.imagem_url or 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80' }}" alt="{{ presente.titulo }}">
+
+            <div class="presente-content">
+                <h3>{{ presente.titulo }}</h3>
+                <p>{{ presente.descricao }}</p>
+
+                <div class="presente-footer">
+                    <span class="valor">R$ {{ '%.2f'|format(presente.valor_sugerido) }}</span>
+
+                    <button
+                        class="btn-secondary abrir-modal"
+                        data-titulo="{{ presente.titulo }}"
+                        data-valor="R$ {{ '%.2f'|format(presente.valor_sugerido) }}"
+                        data-chave="{{ presente.chave_pix }}"
+                        data-tipo="{{ presente.tipo_chave_pix }}"
+                        data-copia="{{ presente.copia_cola_pix }}"
+                    >
+                        Contribuir via PIX
+                    </button>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>

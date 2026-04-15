@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Karine & Josué | Nosso Casamento{% endblock %}
+
+{% block content %}
+{% include "partials/hero.html" %}
+
+{% include "partials/historia.html" %}
+
+{% include "partials/grande_dia.html" %}
+
+{% include "partials/dress_code.html" %}
+
+{% include "partials/presentes.html" %}
+
+{% include "partials/rsvp.html" %}
+
+{% include "partials/mensagens.html" %}
+
+{% include "partials/galeria.html" %}
+
+{% include "partials/fotos_convidados.html" %}
+
+{% include "partials/footer.html" %}
+
+<!-- Modal de PIX -->
+<div class="modal hidden" id="pixModal">
+    <div class="modal-overlay" id="fecharModal"></div>
+
+    <div class="modal-box">
+        <button class="modal-close" id="btnFecharModal">&times;</button>
+
+        <p class="eyebrow">Contribuição via PIX</p>
+        <h3 id="modalTitulo">Título do presente</h3>
+        <p class="modal-valor" id="modalValor">R$ 00</p>
+
+        <div class="qr-placeholder">
+            QR Code aqui
+        </div>
+
+        <div class="pix-info">
+            <p><strong>Chave PIX:</strong> <span id="modalChave"></span></p>
+            <p><strong>Tipo:</strong> <span id="modalTipo"></span></p>
+        </div>
+
+        <label for="pixCopiaCola" class="pix-label">Copia e cola do PIX</label>
+        <textarea id="pixCopiaCola" readonly></textarea>
+
+        <button class="btn-primary" id="btnCopiarPix">Copiar código PIX</button>
+
+        <p class="modal-msg">Se quiser, deixe uma mensagem pra gente 💙</p>
+        <p class="copy-feedback hidden" id="copyFeedback">PIX copiado com sucesso 🎉</p>
+    </div>
+</div>
+{% endblock %}

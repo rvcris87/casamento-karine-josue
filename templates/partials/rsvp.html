@@ -1,0 +1,45 @@
+<section class="section section-blue" id="rsvp">
+    <div class="section-header">
+        <p class="eyebrow">RSVP</p>
+        <h2>Confirme sua presença</h2>
+        <p>
+            Ficaremos muito felizes em celebrar esse momento com você.
+        </p>
+    </div>
+
+    <div class="form-box">
+        <form class="rsvp-form" method="POST" action="{{ url_for('rsvp.enviar_rsvp') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome" name="nome" placeholder="Seu nome completo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="telefone">Telefone</label>
+                    <input type="text" id="telefone" name="telefone" placeholder="(00) 00000-0000">
+                </div>
+
+                <div class="form-group">
+                    <label for="acompanhantes">Quantidade de acompanhantes</label>
+                    <input type="number" id="acompanhantes" name="acompanhantes" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmacao">Confirmação</label>
+                    <select id="confirmacao" name="confirmacao" required>
+                        <option value="sim">Sim, estarei presente</option>
+                        <option value="nao">Não poderei comparecer</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="observacao">Observação</label>
+                <textarea id="observacao" name="observacao" placeholder="Deixe uma observação, se quiser"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary">Enviar confirmação</button>
+        </form>
+    </div>
+</section>

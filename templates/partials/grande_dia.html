@@ -1,0 +1,42 @@
+<section class="section section-blue" id="grande-dia">
+    <div class="section-header">
+        <p class="eyebrow">O grande dia</p>
+        <h2>Informações do evento</h2>
+        <p>
+            {% if config %}
+            Nosso casamento será celebrado no {{ config.local_cerimonia }},
+            em um cenário especial para compartilhar esse momento com quem amamos.
+            {% else %}
+            Reserve esse momento com carinho. Será um dia inesquecível para nós.
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Data</h3>
+            <p>{{ config.data_casamento if config else '10 de outubro de 2026' }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Horário</h3>
+            <p>15:30h</p>
+        </div>
+
+        <div class="info-card destaque-local">
+            <h3>Local do Evento</h3>
+            <p>{{ config.local_cerimonia if config else 'Hotel Fazenda Portal de Gravatá' }}</p>
+            <small>{{ config.endereco_cerimonia if config else 'BR-232, s/n - Novo Gravatá, Gravatá - PE' }}</small>
+        </div>
+    </div>
+
+    <div class="map-actions">
+        <a
+            href="https://www.google.com/maps/search/?api=1&query={% if config %}{{ config.local_cerimonia | urlencode }}{% else %}Hotel+Fazenda+Portal+de+Gravat%C3%A1{% endif %}"
+            class="btn-primary"
+            target="_blank"
+        >
+            Abrir no Google Maps
+        </a>
+    </div>
+</section>

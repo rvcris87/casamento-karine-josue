@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Admin | Fotos{% endblock %}
+
+{% block content %}
+<section class="admin-page">
+    <div class="admin-header">
+        <p class="eyebrow">Painel administrativo</p>
+        <h1>Fotos dos convidados</h1>
+        <p>Gerencie as fotos enviadas para a galeria do casamento.</p>
+
+        <div class="admin-top-actions">
+            <a href="{{ url_for('admin.admin_rsvp') }}" class="btn-outline">Ver RSVPs</a>
+
+            <form method="POST" action="{{ url_for('admin.logout_admin') }}" class="logout-form">
+                <button type="submit" class="btn-outline">Sair do painel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        {% for foto in fotos %}
+        <article class="admin-card">
+            <div class="admin-card-image-wrapper">
+                <img src="{{ foto.imagem_url }}" alt="Foto enviada por {{ foto.nome_convidado }}">
+                <div class="admin-card-badges">
+                    {% if foto.destaque %}
+                    <span class="badge badge-destaque">⭐ Destaque</span>
+                    {% else %}
+                    <span class="badge badge-galeria">📷 Galeria</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="admin-card-content">
+                <div class="admin-card-top">
+                    <h3>{{ foto.nome_convidado }}</h3>
+                </div>
+
+                {% if foto.legenda %}
+                <p class="admin-legenda">{{ foto.legenda }}</p>
+                {% endif %}
+
+                <div class="admin-actions">
+                    <form method="POST" action="{{ url_for('admin.destacar_foto', foto_id=foto.id) }}">
+                        <input type="hidden" name="destaque" value="{{ 'false' if foto.destaque else 'true' }}">
+                        <button type="submit" class="btn-outline">
+                            {% if foto.destaque %}⭐ Remover destaque{% else %}✦ Destacar{% endif %}
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ url_for('admin.remover_foto', foto_id=foto.id) }}" class="form-excluir" onsubmit="return confirm('Tem certeza que deseja excluir esta foto? Esta ação não pode ser desfeita.');">
+                        <button type="submit" class="btn-danger">🗑️ Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

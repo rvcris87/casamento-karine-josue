@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Admin | RSVP{% endblock %}
+
+{% block content %}
+<section class="admin-page">
+    <div class="admin-header">
+        <p class="eyebrow">Painel administrativo</p>
+        <h1>Confirmações de presença</h1>
+        <p>Veja quem confirmou presença no casamento.</p>
+
+        <div class="admin-top-actions">
+            <a href="{{ url_for('admin.admin_fotos') }}" class="btn-outline">Ver fotos</a>
+
+            <form method="POST" action="{{ url_for('admin.logout_admin') }}" class="logout-form">
+                <button type="submit" class="btn-outline">Sair do painel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Acompanhantes</th>
+                    <th>Confirmação</th>
+                    <th>Observação</th>
+                    <th>Enviado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in lista_rsvp %}
+                <tr>
+                    <td>{{ item.nome_convidado }}</td>
+                    <td>{{ item.telefone or '-' }}</td>
+                    <td>{{ item.acompanhantes }}</td>
+                    <td>
+                        {% if item.confirmacao == 'sim' %}
+                            <span class="status-badge status-aprovado">Sim</span>
+                        {% else %}
+                            <span class="status-badge status-rejeitado">Não</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.observacao or '-' }}</td>
+                    <td>{{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
