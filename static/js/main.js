@@ -71,7 +71,7 @@ function soltarConfetes() {
 }
 
 function iniciarContagemRegressiva() {
-    const dataCasamento = new Date("2026-10-10T00:00:00");
+    const dataCasamento = new Date("2026-10-10T15:30:00");
 
     const diasEl = document.getElementById("dias");
     const horasEl = document.getElementById("horas");
@@ -86,7 +86,7 @@ function iniciarContagemRegressiva() {
             diasEl.textContent = "0";
             horasEl.textContent = "0";
             minutosEl.textContent = "0";
-            segundosEl.textContent = "0";
+            if (segundosEl) segundosEl.textContent = "0";
             return;
         }
 
@@ -98,7 +98,7 @@ function iniciarContagemRegressiva() {
         diasEl.textContent = dias;
         horasEl.textContent = horas;
         minutosEl.textContent = minutos;
-        segundosEl.textContent = segundos;
+        if (segundosEl) segundosEl.textContent = segundos;
     }
 
     atualizarContador();
