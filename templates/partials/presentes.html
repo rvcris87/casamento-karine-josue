@@ -9,30 +9,28 @@
     </div>
 
     <div class="presentes-grid">
-        {% for presente in presentes %}
-        <article class="presente-card">
-            <img src="{{ presente.imagem_url or 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80' }}" alt="{{ presente.titulo }}">
+        <div class="presente fade-in">
+            <img src="/static/img/panela.jpg" alt="Panela de cerâmica">
+            <h3>Panela de cerâmica (bege)</h3>
+            <button class="btn-present">Presentear</button>
+        </div>
 
-            <div class="presente-content">
-                <h3>{{ presente.titulo }}</h3>
-                <p>{{ presente.descricao }}</p>
+        <div class="presente destaque fade-in">
+            <img src="/static/img/cafeteira.jpg" alt="Cafeteira Oster">
+            <h3>Cafeteira Oster</h3>
+            <button class="btn-present">Presentear</button>
+        </div>
 
-                <div class="presente-footer">
-                    <span class="valor">R$ {{ '%.2f'|format(presente.valor_sugerido) }}</span>
+        <div class="presente fade-in">
+            <img src="/static/img/geladeira.jpg" alt="Geladeira">
+            <h3>Geladeira</h3>
+            <button class="btn-present">Presentear</button>
+        </div>
 
-                    <button
-                        class="btn-secondary abrir-modal"
-                        data-titulo="{{ presente.titulo }}"
-                        data-valor="R$ {{ '%.2f'|format(presente.valor_sugerido) }}"
-                        data-chave="{{ presente.chave_pix }}"
-                        data-tipo="{{ presente.tipo_chave_pix }}"
-                        data-copia="{{ presente.copia_cola_pix }}"
-                    >
-                        Contribuir via PIX
-                    </button>
-                </div>
-            </div>
-        </article>
-        {% endfor %}
+        <div class="presente fade-in">
+            <img src="/static/img/sofa.jpg" alt="Sofá">
+            <h3>Sofá</h3>
+            <button class="btn-present">Presentear</button>
+        </div>
     </div>
 </section>

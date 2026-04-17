@@ -370,11 +370,63 @@ textarea {
 }
 
 .presentes-grid {
-    width: min(var(--container), 92%);
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-    gap: 24px;
+    column-count: 2;
+    column-gap: 12px;
+    padding: 15px;
+    display: block;
+}
+
+.presente {
+    background: white;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transition: 0.3s ease;
+    break-inside: avoid;
+}
+
+.presente img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.presente h3 {
+    font-size: 0.95rem;
+    padding: 10px;
+    text-align: center;
+    color: var(--texto);
+    font-weight: 600;
+    margin: 0;
+}
+
+.btn-present {
+    margin: 10px;
+    padding: 8px;
+    width: calc(100% - 20px);
+    border: none;
+    background: var(--azul);
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: 0.25s ease;
+}
+
+.btn-present:hover {
+    background: var(--azul-claro);
+    transform: translateY(-2px);
+}
+
+.presente:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.presente.destaque {
+    border: 2px solid var(--azul);
 }
 
 .presente-card {
@@ -1166,10 +1218,18 @@ textarea {
     .galeria-grid {
         column-count: 1 !important;
     }
+    
+    .presentes-grid {
+        column-count: 1;
+    }
 }
 
 @media (min-width: 1024px) {
     .galeria-grid {
         column-count: 3 !important;
+    }
+    
+    .presentes-grid {
+        column-count: 3;
     }
 }
