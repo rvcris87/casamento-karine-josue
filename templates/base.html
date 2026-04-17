@@ -8,6 +8,20 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <header class="header">
+        <div class="logo">Karine & Josué</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+
+        <nav id="menu" class="menu-mobile">
+            <a href="#inicio">Início</a>
+            <a href="#historia">História</a>
+            <a href="#evento">O Grande Dia</a>
+            <a href="#presentes">Presentes</a>
+            <a href="#rsvp">RSVP</a>
+        </nav>
+    </header>
+
     {% block content %}{% endblock %}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

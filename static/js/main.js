@@ -1,3 +1,44 @@
+/* MENU HAMBURGER */
+function toggleMenu() {
+    const menu = document.getElementById("menu");
+    menu.classList.toggle("active");
+}
+
+// Fechar menu ao clicar em um link
+document.querySelectorAll(".menu-mobile a").forEach(link => {
+    link.addEventListener("click", () => {
+        document.getElementById("menu").classList.remove("active");
+    });
+});
+
+// Fechar menu ao clicar fora
+document.addEventListener("click", (e) => {
+    const header = document.querySelector(".header");
+    const menu = document.getElementById("menu");
+    if (!header.contains(e.target) && menu.classList.contains("active")) {
+        menu.classList.remove("active");
+    }
+});
+
+/* FADE IN ANIMATIONS AO SCROLL */
+function observeFadeElements() {
+    const elements = document.querySelectorAll(".fade-in");
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("show");
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    elements.forEach(el => observer.observe(el));
+}
+
+// Iniciar observer quando DOM está pronto
+document.addEventListener("DOMContentLoaded", observeFadeElements);
+
 const modal = document.getElementById("pixModal");
 const abrirModalBtns = document.querySelectorAll(".abrir-modal");
 const fecharModal = document.getElementById("fecharModal");

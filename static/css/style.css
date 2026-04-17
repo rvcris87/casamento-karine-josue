@@ -2,6 +2,12 @@
     --font-title: 'Playfair Display', serif;
     --font-body: 'Poppins', sans-serif;
     
+    --azul: #4A6FA5;
+    --azul-claro: #6b8ecb;
+    --branco: #ffffff;
+    --cinza: #6b7280;
+    --texto: #333;
+    
     --white: #ffffff;
     --off-white: #f8f9fb;
     --serenity: #a7c7e7;
@@ -30,6 +36,97 @@ body {
     background: var(--off-white);
     color: var(--text);
     line-height: 1.6;
+    padding-top: 60px;
+}
+
+/* HEADER HAMBURGER */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.logo {
+    font-family: var(--font-title);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--azul);
+}
+
+.menu-toggle {
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--azul);
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.menu-mobile {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background: white;
+    width: 220px;
+    display: none;
+    flex-direction: column;
+    padding: 12px 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-radius: 0 0 0 12px;
+    animation: slideDown 0.3s ease;
+}
+
+.menu-mobile.active {
+    display: flex;
+}
+
+.menu-mobile a {
+    padding: 12px 20px;
+    text-decoration: none;
+    color: var(--texto);
+    font-weight: 500;
+    transition: 0.25s ease;
+    border-left: 3px solid transparent;
+}
+
+.menu-mobile a:hover {
+    background: var(--off-white);
+    color: var(--azul);
+    border-left-color: var(--azul);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* FADE IN ANIMATIONS */
+.fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease;
+}
+
+.fade-in.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 img {
@@ -111,18 +208,20 @@ textarea {
     display: inline-block;
     margin-top: 15px;
     padding: 11px 24px;
-    background: #4A6FA5;
+    background: linear-gradient(135deg, var(--azul), var(--azul-claro));
     color: white;
-    border-radius: 20px;
+    border-radius: 25px;
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 600;
     transition: 0.25s ease;
+    box-shadow: 0 8px 20px rgba(74, 111, 165, 0.3);
 }
 
 .btn-confirmar:hover {
-    background: #3a5280;
+    background: linear-gradient(135deg, var(--azul-claro), var(--azul));
     transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(74, 111, 165, 0.4);
 }
 
 .contador {
@@ -1033,5 +1132,44 @@ textarea {
 
     .contador span {
         font-size: 1.8rem;
+    }
+}
+
+/* GALERIA ESTILO PINTEREST */
+.galeria-grid {
+    column-count: 2 !important;
+    column-gap: 15px !important;
+    padding: 15px !important;
+    display: block !important;
+}
+
+.galeria-grid .foto-item {
+    break-inside: avoid;
+    margin-bottom: 15px;
+}
+
+.galeria-grid .foto-container {
+    aspect-ratio: auto !important;
+    height: auto;
+}
+
+.galeria-grid .foto-destaque {
+    grid-column: auto !important;
+    grid-row: auto !important;
+}
+
+.galeria-grid .foto-destaque .foto-container {
+    height: auto !important;
+}
+
+@media (max-width: 768px) {
+    .galeria-grid {
+        column-count: 1 !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .galeria-grid {
+        column-count: 3 !important;
     }
 }
