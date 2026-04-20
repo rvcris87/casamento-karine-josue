@@ -161,7 +161,7 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: url('/static/img/capa.jpg');
+    background-image: url('/static/img/fundo-casamento.jpg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;

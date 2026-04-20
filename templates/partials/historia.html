@@ -73,9 +73,9 @@
                     <button class="carrossel-btn prev" onclick="moverCarrossel(-1)">&#10094;</button>
 
                     <div class="carrossel-slides">
-                        <img src="/static/img/casal1.jpg" class="slide ativo" alt="Foto do casal 1">
-                        <img src="/static/img/casal2.jpg" class="slide" alt="Foto do casal 2">
-                        <img src="/static/img/casal3.jpg" class="slide" alt="Foto do casal 3">
+                        <img src="{{ url_for('static', filename='img/casal1.jpg') }}" class="slide ativo" alt="Foto do casal 1">
+                        <img src="{{ url_for('static', filename='img/casal2.jpg') }}" class="slide" alt="Foto do casal 2">
+                        <img src="{{ url_for('static', filename='img/casal3.jpg') }}" class="slide" alt="Foto do casal 3">
                     </div>
 
                     <button class="carrossel-btn next" onclick="moverCarrossel(1)">&#10095;</button>
