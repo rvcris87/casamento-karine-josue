@@ -151,12 +151,20 @@ iniciarContagemRegressiva();
 /* CARROSSEL DA HISTÓRIA */
 let slideAtual = 0;
 
-function moverCarrossel(direcao) {
+function mostrarSlide(index) {
     const slides = document.querySelectorAll('.carrossel-lateral .slide');
 
     if (!slides.length) return;
 
-    slides[slideAtual].classList.remove('ativo');
+    slides.forEach(slide => slide.classList.remove('ativo'));
+
+    slides[index].classList.add('ativo');
+}
+
+function moverCarrossel(direcao) {
+    const slides = document.querySelectorAll('.carrossel-lateral .slide');
+
+    if (!slides.length) return;
 
     slideAtual += direcao;
 
@@ -168,5 +176,10 @@ function moverCarrossel(direcao) {
         slideAtual = 0;
     }
 
-    slides[slideAtual].classList.add('ativo');
+    mostrarSlide(slideAtual);
 }
+
+// 🔥 AUTO PLAY (aqui está a mágica)
+setInterval(() => {
+    moverCarrossel(1);
+}, 4000); // troca a cada 4 segundos

@@ -1378,11 +1378,16 @@ textarea {
     width: 100%;
     height: 560px;
     object-fit: cover;
-    display: none;
+    opacity: 0;
+    transition: opacity 0.6s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .slide.ativo {
-    display: block;
+    opacity: 1;
+    position: relative;
 }
 
 .carrossel-btn {
