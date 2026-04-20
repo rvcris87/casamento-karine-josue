@@ -147,3 +147,26 @@ function iniciarContagemRegressiva() {
 }
 
 iniciarContagemRegressiva();
+
+/* CARROSSEL DA HISTÓRIA */
+let slideAtual = 0;
+
+function moverCarrossel(direcao) {
+    const slides = document.querySelectorAll('.carrossel-lateral .slide');
+
+    if (!slides.length) return;
+
+    slides[slideAtual].classList.remove('ativo');
+
+    slideAtual += direcao;
+
+    if (slideAtual < 0) {
+        slideAtual = slides.length - 1;
+    }
+
+    if (slideAtual >= slides.length) {
+        slideAtual = 0;
+    }
+
+    slides[slideAtual].classList.add('ativo');
+}
