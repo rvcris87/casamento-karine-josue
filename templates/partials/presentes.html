@@ -10,27 +10,35 @@
 
     <div class="presentes-grid">
         <div class="presente fade-in">
-            <img src="/static/img/panela.jpg" alt="Panela de cerâmica">
-            <h3>Panela de cerâmica (bege)</h3>
-            <button class="btn-present">Presentear</button>
+            <img src="{{ url_for('static', filename='img/presentes/panela.jpg') }}" alt="Panela de cerâmica">
+            <div class="presente-info">
+                <h3>Panela de cerâmica (bege)</h3>
+                <button class="btn-present">Presentear</button>
+            </div>
         </div>
 
         <div class="presente destaque fade-in">
-            <img src="/static/img/cafeteira.jpg" alt="Cafeteira Oster">
-            <h3>Cafeteira Oster</h3>
-            <button class="btn-present">Presentear</button>
+            <img src="{{ url_for('static', filename='img/presentes/cafeteira.jpg') }}" alt="Cafeteira Oster">
+            <div class="presente-info">
+                <h3>Cafeteira Oster</h3>
+                <button class="btn-present">Presentear</button>
+            </div>
         </div>
 
         <div class="presente fade-in">
-            <img src="/static/img/geladeira.jpg" alt="Geladeira">
-            <h3>Geladeira</h3>
-            <button class="btn-present">Presentear</button>
+            <img src="{{ url_for('static', filename='img/presentes/geladeira.jpg') }}" alt="Geladeira">
+            <div class="presente-info">
+                <h3>Geladeira</h3>
+                <button class="btn-present">Presentear</button>
+            </div>
         </div>
 
         <div class="presente fade-in">
-            <img src="/static/img/sofa.jpg" alt="Sofá">
-            <h3>Sofá</h3>
-            <button class="btn-present">Presentear</button>
+            <img src="{{ url_for('static', filename='img/presentes/sofa.jpg') }}" alt="Sofá">
+            <div class="presente-info">
+                <h3>Sofá</h3>
+                <button class="btn-present">Presentear</button>
+            </div>
         </div>
     </div>
 </section>

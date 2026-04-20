@@ -620,19 +620,27 @@ textarea {
 
 .presentes-grid {
     column-count: 2;
-    column-gap: 12px;
-    padding: 15px;
-    display: block;
+    column-gap: 20px;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
 }
 
 .presente {
     background: white;
-    border-radius: 14px;
-    margin-bottom: 12px;
+    border-radius: 20px;
+    margin-bottom: 20px;
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-    transition: 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
     break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+}
+
+.presente:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
 }
 
 .presente img {
@@ -641,41 +649,78 @@ textarea {
     display: block;
 }
 
-.presente h3 {
-    font-size: 0.95rem;
-    padding: 10px;
-    text-align: center;
-    color: var(--texto);
+.presente-info {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.presente-info h3 {
+    font-size: 1.1rem;
+    color: #3f4a59;
     font-weight: 600;
     margin: 0;
+    text-align: center;
+    line-height: 1.4;
 }
 
 .btn-present {
-    margin: 10px;
-    padding: 8px;
-    width: calc(100% - 20px);
+    width: 100%;
+    padding: 12px 20px;
     border: none;
-    background: var(--azul);
+    background: #5a7fb7;
     color: white;
-    border-radius: 20px;
+    border-radius: 24px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.9rem;
-    transition: 0.25s ease;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(90, 127, 183, 0.3);
 }
 
 .btn-present:hover {
-    background: var(--azul-claro);
+    background: #466799;
     transform: translateY(-2px);
-}
-
-.presente:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 16px rgba(90, 127, 183, 0.4);
 }
 
 .presente.destaque {
-    border: 2px solid var(--azul);
+    border: 2px solid #5a7fb7;
+}
+
+@media (min-width: 768px) {
+    .presentes-grid {
+        column-count: 3;
+        column-gap: 25px;
+    }
+    .presente {
+        margin-bottom: 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .presentes-grid {
+        column-count: 2;
+        column-gap: 12px;
+        padding: 12px;
+    }
+    .presente {
+        margin-bottom: 12px;
+        border-radius: 16px;
+    }
+    .presente-info {
+        padding: 16px 12px;
+        gap: 12px;
+    }
+    .presente-info h3 {
+        font-size: 0.95rem;
+    }
+    .btn-present {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
 }
 
 .presente-card {
@@ -1501,18 +1546,10 @@ textarea {
     .galeria-grid {
         column-count: 1 !important;
     }
-    
-    .presentes-grid {
-        column-count: 1;
-    }
 }
 
 @media (min-width: 1024px) {
     .galeria-grid {
         column-count: 3 !important;
-    }
-    
-    .presentes-grid {
-        column-count: 3;
     }
 }
