@@ -1312,6 +1312,32 @@ textarea {
     color: var(--text-soft);
 }
 
+/* SEÇÃO NOSSA HISTÓRIA */
+.historia {
+    padding: 80px 20px;
+    background: #f9f9f9;
+}
+
+.historia-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.historia h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #5a7fb7;
+    margin-bottom: 40px;
+}
+
+.historia-texto p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #555;
+    margin-bottom: 18px;
+}
+
 /* GALERIA ESTILO PINTEREST */
 .galeria-grid {
     column-count: 2 !important;
