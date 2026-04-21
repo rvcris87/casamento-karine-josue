@@ -269,3 +269,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 });
+
+/* UPLOAD DE FOTOS - DRAG & DROP E SELEÇÃO */
+document.addEventListener('DOMContentLoaded', () => {
+    const uploadArea = document.querySelector('.upload-area');
+    const uploadLabel = document.querySelector('.upload-label');
+    const fileInput = document.querySelector('.file-input-hidden');
+    const arquivosList = document.getElementById('arquivos-selecionados');
+
+    if (!fileInput) return;
+
+    // Funções do drag & drop
+    if (uploadArea) {
+        uploadArea.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = '#a7c7e7';
+            uploadArea.style.background = '#f0f7ff';
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = '#e5e7eb';
+            uploadArea.style.background = '#ffffff';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = '#e5e7eb';
+            uploadArea.style.background = '#ffffff';
+
+            const files = e.dataTransfer.files;
+            fileInput.files = files;
+            atualizarArquivosSelecionados();
+        });
+    }
+
+    // Atualizar lista quando arquivo é selecionado
+    fileInput.addEventListener('change', atualizarArquivosSelecionados);
+
+    function atualizarArquivosSelecionados() {
+        arquivosList.innerHTML = '';
+
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        ul.style.listStyle = 'none';
+        ul.style.padding = '0';
+
+        Array.from(fileInput.files).forEach((file, index) => {
+            const li = document.createElement('li');
+            li.className = 'arquivo-item';
+
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+
+            li.innerHTML = `
+                <span>${file.name} (${fileSize} MB)</span>
+                <button type="button" class="remove-file" data-index="${index}">✕</button>
+            `;
+
+            li.querySelector('.remove-file').addEventListener('click', (e) => {
+                e.preventDefault();
+                removerArquivo(index);
+            });
+
+            ul.appendChild(li);
+        });
+
+        arquivosList.appendChild(ul);
+    }
+
+    function removerArquivo(index) {
+        const dt = new DataTransfer();
+        const files = fileInput.files;
+
+        for (let i = 0; i < files.length; i++) {
+            if (i !== index) {
+                dt.items.add(files[i]);
+            }
+        }
+
+        fileInput.files = dt.files;
+        atualizarArquivosSelecionados();
+    }
+});

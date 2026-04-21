@@ -1481,44 +1481,7 @@ textarea {
     }
 }
 
-/* GALERIA ESTILO PINTEREST */
-.galeria-grid {
-    column-count: 2 !important;
-    column-gap: 15px !important;
-    padding: 15px !important;
-    display: block !important;
-}
 
-.galeria-grid .foto-item {
-    break-inside: avoid;
-    margin-bottom: 15px;
-}
-
-.galeria-grid .foto-container {
-    aspect-ratio: auto !important;
-    height: auto;
-}
-
-.galeria-grid .foto-destaque {
-    grid-column: auto !important;
-    grid-row: auto !important;
-}
-
-.galeria-grid .foto-destaque .foto-container {
-    height: auto !important;
-}
-
-@media (max-width: 768px) {
-    .galeria-grid {
-        column-count: 1 !important;
-    }
-}
-
-@media (min-width: 1024px) {
-    .galeria-grid {
-        column-count: 3 !important;
-    }
-}
 
 .modal-overlay {
     position: fixed;
@@ -1663,4 +1626,19 @@ textarea {
     .modal-presente-valor {
         font-size: 1.7rem;
     }
+}
+
+/* ESTILOS PARA UPLOAD DE FOTOS */
+.remove-file {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.remove-file:hover {
+    color: #f44336;
 }

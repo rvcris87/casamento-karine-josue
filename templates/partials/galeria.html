@@ -1,103 +1,143 @@
-<section class="galeria-fotos">
+<section class="galeria-fotos" id="galeria-secao">
     <div class="container">
-        <div class="section-header fade-in">
-            <h2>Galeria de Fotos 🖼️</h2>
-            <p class="subtitulo">Nossas memórias mais lindas com destaques de nossos convidados</p>
+        <div class="galeria-header">
+            <h2 class="galeria-titulo">Galeria de Fotos</h2>
+            <p class="galeria-subtitulo">Nossos momentos mais belos</p>
         </div>
 
         {% if fotos_aprovadas %}
-            <!-- Galeria em Grid -->
             <div class="galeria-grid">
                 {% for foto in fotos_aprovadas %}
-                    <div class="foto-item {% if foto.destaque %}foto-destaque{% endif %}">
-                        <div class="foto-container">
-                            <img src="{{ foto.imagem_url }}" alt="{{ foto.legenda or 'Foto do casamento' }}" class="foto-imagem">
-                            <div class="foto-overlay">
-                                <div class="foto-info">
-                                    <p class="foto-nome">{{ foto.nome_convidado }}</p>
-                                    {% if foto.legenda %}
-                                        <p class="foto-legenda">{{ foto.legenda }}</p>
-                                    {% endif %}
-                                    <p class="foto-data">{{ foto.created_at.strftime('%d de %b de %Y') if foto.created_at else '' }}</p>
-                                </div>
-                            </div>
-                            {% if foto.destaque %}
-                                <div class="destaque-badge">⭐ Destaque</div>
-                            {% endif %}
-                        </div>
+                    <div class="galeria-item">
+                        <img 
+                            src="{{ foto.imagem_url }}" 
+                            alt="{{ foto.legenda or 'Foto do casamento' }}" 
+                            class="galeria-imagem"
+                            loading="lazy"
+                        >
                     </div>
                 {% endfor %}
-            </div>
-        {% else %}
-            <div class="galeria-vazia">
-                <p>📷 A galeria de fotos será preenchida com as contribuições de vocês!</p>
-                <p>Vá para a seção "Compartilhe Suas Fotos" e envie as suas imagens do nosso casamento.</p>
             </div>
         {% endif %}
     </div>
 </section>
 
-<!-- Modal para visualização em fullscreen -->
-<div id="modal-foto" class="modal-foto">
-    <span class="fechar-modal">&times;</span>
-    <img class="foto-modal-conteudo" id="img-modal">
-    <div class="foto-modal-info">
-        <p id="nome-modal"></p>
-        <p id="legenda-modal"></p>
-    </div>
-    <a href="#" class="proximo-btn" onclick="mudarFoto(1)">&gt;</a>
-    <a href="#" class="anterior-btn" onclick="mudarFoto(-1)">&lt;</a>
-</div>
-
 <style>
 .galeria-fotos {
-    padding: 60px 20px;
-    background: linear-gradient(135deg, #ffffff 0%, #f9feff 100%);
+    padding: 100px 20px;
+    background: #ffffff;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
 }
 
-.galeria-fotos h2 {
+.galeria-header {
     text-align: center;
+    margin-bottom: 80px;
+}
+
+.galeria-titulo {
     font-family: var(--font-title);
-    color: var(--serenity);
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
 }
 
-.galeria-fotos .subtitulo {
-    text-align: center;
-    color: var(--serenity-light);
-    margin-bottom: 40px;
-    font-size: 1.1rem;
+.galeria-subtitulo {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--text-soft);
+    font-weight: 300;
+    letter-spacing: 0.5px;
 }
 
-/* Grid de Fotos */
+/* Grid Pinterest */
 .galeria-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
+    column-count: 3;
+    column-gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.foto-item {
+.galeria-item {
+    break-inside: avoid;
+    margin-bottom: 28px;
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.foto-item:hover {
-    transform: translateY(-5px);
-}
-
-.foto-container {
-    position: relative;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                filter 0.4s ease;
+    border-radius: 16px;
     overflow: hidden;
-    border-radius: 8px;
-    aspect-ratio: 1;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    background: #f0f0f0;
+    display: block;
+    position: relative;
 }
 
-.foto-imagem {
+.galeria-item:hover {
+    transform: scale(1.02);
+    filter: brightness(1.05);
+}
+
+.galeria-imagem {
     width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(63, 70, 80, 0.08);
+    transition: box-shadow 0.4s ease;
+    object-fit: cover;
+}
+
+.galeria-item:hover .galeria-imagem {
+    box-shadow: 0 16px 48px rgba(63, 70, 80, 0.15);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .galeria-fotos {
+        padding: 80px 20px;
+    }
+
+    .galeria-header {
+        margin-bottom: 60px;
+    }
+
+    .galeria-titulo {
+        font-size: 2.2rem;
+    }
+
+    .galeria-grid {
+        column-count: 2;
+        column-gap: 20px;
+    }
+
+    .galeria-item {
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .galeria-fotos {
+        padding: 60px 16px;
+    }
+
+    .galeria-header {
+        margin-bottom: 50px;
+    }
+
+    .galeria-titulo {
+        font-size: 1.8rem;
+    }
+
+    .galeria-grid {
+        column-count: 1;
+        column-gap: 0;
+    }
+
+    .galeria-item {
+        margin-bottom: 16px;
+    }
+}
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s;
