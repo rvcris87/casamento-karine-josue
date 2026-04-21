@@ -463,7 +463,7 @@ def excluir_foto(foto_id):
     conn.close()
 
 
-def salvar_rsvp(nome_convidado, telefone, acompanhantes, confirmacao, observacao):
+def salvar_rsvp(nome_convidado, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao):
     conn = None
     cur = None
 
@@ -476,14 +476,16 @@ def salvar_rsvp(nome_convidado, telefone, acompanhantes, confirmacao, observacao
                 nome_convidado,
                 telefone,
                 acompanhantes,
+                quantidade_criancas,
                 confirmacao,
                 observacao
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             nome_convidado,
             telefone,
             acompanhantes,
+            quantidade_criancas,
             confirmacao,
             observacao
         ))
@@ -502,7 +504,7 @@ def get_todos_rsvp():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, nome_convidado, telefone, acompanhantes, confirmacao, observacao, created_at
+        SELECT id, nome_convidado, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao, created_at
         FROM rsvp
         ORDER BY created_at DESC
     """)
@@ -516,9 +518,10 @@ def get_todos_rsvp():
             "nome_convidado": r[1],
             "telefone": r[2],
             "acompanhantes": r[3],
-            "confirmacao": r[4],
-            "observacao": r[5],
-            "created_at": r[6],
+            "quantidade_criancas": r[4],
+            "confirmacao": r[5],
+            "observacao": r[6],
+            "created_at": r[7],
         })
 
     cur.close()

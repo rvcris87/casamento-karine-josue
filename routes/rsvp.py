@@ -9,6 +9,7 @@ def enviar_rsvp():
     nome = request.form.get("nome", "").strip()
     telefone = request.form.get("telefone", "").strip()
     acompanhantes = request.form.get("acompanhantes", "0").strip()
+    quantidade_criancas = request.form.get("quantidade_criancas", "0").strip()
     confirmacao = request.form.get("confirmacao", "").strip().lower()
     observacao = request.form.get("observacao", "").strip()
 
@@ -28,7 +29,14 @@ def enviar_rsvp():
         acompanhantes = 0
 
     try:
-        salvar_rsvp(nome, telefone, acompanhantes, confirmacao, observacao)
+        quantidade_criancas = int(quantidade_criancas) if quantidade_criancas else 0
+        if quantidade_criancas < 0:
+            quantidade_criancas = 0
+    except ValueError:
+        quantidade_criancas = 0
+
+    try:
+        salvar_rsvp(nome, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao)
         flash("Confirmação enviada com sucesso! 💙", "sucesso")
     except Exception as e:
         print("ERRO AO SALVAR RSVP:", repr(e))
