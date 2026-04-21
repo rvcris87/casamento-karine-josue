@@ -25,8 +25,8 @@
 
         <div class="info-card destaque-local">
             <h3>Local do Evento</h3>
-            <p>{{ config.local_cerimonia if config else 'Hotel Fazenda Portal de Gravatá' }}</p>
-            <small>{{ config.endereco_cerimonia if config else 'BR-232, s/n - Novo Gravatá, Gravatá - PE' }}</small>
+            <p>{{ evento.local_cerimonia if evento else 'Hotel Fazenda Portal de Gravatá' }}</p>
+            <small>{{ evento.endereco_cerimonia if evento else 'BR-232, s/n - Novo Gravatá, Gravatá - PE' }}</small>
         </div>
     </div>
 
