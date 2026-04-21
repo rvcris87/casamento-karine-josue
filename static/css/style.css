@@ -1661,3 +1661,30 @@ textarea {
 .remove-file:hover {
     color: #f44336;
 }
+@media (max-width: 768px) {
+    .logo,
+    .header-logo,
+    .nav-logo,
+    .navbar-brand {
+        color: #2d3748 !important; /* mais escuro */
+        opacity: 1 !important;
+        text-shadow: none !important;
+        filter: none !important;
+        font-weight: 600 !important;
+    }
+}
+.hero-nomes {
+    text-align: center;
+}
+
+.hero-nomes .amp {
+    display: inline-block;
+    font-size: 1.6rem;
+    margin: 8px 0;
+    color: #9aa5b1;
+}
+.hero-data {
+    font-size: 1.05rem;
+    color: #6b7280;
+    margin-top: 10px;
+}
