@@ -15,7 +15,7 @@
     <div class="info-grid">
         <div class="info-card">
             <h3>Data</h3>
-            <p>{{ config.data_casamento if config else '10 de outubro de 2026' }}</p>
+            <p>{{'10 de outubro de 2026' }}</p>
         </div>
 
         <div class="info-card">
@@ -31,11 +31,8 @@
     </div>
 
     <div class="map-actions">
-        <a
-            href="https://www.google.com/maps/search/?api=1&query={% if config %}{{ config.local_cerimonia | urlencode }}{% else %}Hotel+Fazenda+Portal+de+Gravat%C3%A1{% endif %}"
-            class="btn-primary"
-            target="_blank"
-        >
+        <a href="https://www.google.com/maps/search/?api=1&query={% if config %}{{ config.local_cerimonia | urlencode }}{% else %}Hotel+Fazenda+Portal+de+Gravat%C3%A1{% endif %}"
+            class="btn-primary" target="_blank">
             Abrir no Google Maps
         </a>
     </div>

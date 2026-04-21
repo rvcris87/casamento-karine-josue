@@ -1,7 +1,7 @@
 <footer class="footer">
     <div class="footer-content">
-        <p class="footer-names">Karine Ribeiro & Josué Alencar</p>
-        <p>10 de outubro de 2026</p>
+        <p class="footer-names">{{ evento.nome_noiva if (evento and evento.nome_noiva) else 'Karine' }} & {{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josué' }}</p>
+        <p>{{ evento.data_casamento if (evento and evento.data_casamento) else '10 de outubro de 2026' }}</p>
         <p>Com amor, esperamos você nesse dia tão especial.</p>
     </div>
 </footer>

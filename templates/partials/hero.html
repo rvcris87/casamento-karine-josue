@@ -6,14 +6,14 @@
     <div class="hero-inner">
         <!-- Títulos -->
         <h1 class="hero-title">
-            <span class="nome">Karine</span>
+            <span class="nome">{{ evento.nome_noiva if (evento and evento.nome_noiva) else 'Karine' }}</span>
             <span class="and">&</span>
-            <span class="nome">Josué</span>
+            <span class="nome">{{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josué' }}</span>
         </h1>
 
         <!-- Data e hora -->
         <p class="hero-date">
-            10 de outubro de 2026 • 15:30h
+            {{ evento.data_casamento if (evento and evento.data_casamento) else '10 de outubro de 2026' }} • 15:30h
         </p>
 
         <!-- Mensagem -->

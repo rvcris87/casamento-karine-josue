@@ -3,6 +3,7 @@ import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -11,32 +12,49 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    logger.info("DATABASE_URL carregada com sucesso.")
+    try:
+        parsed = urlparse(DATABASE_URL)
+        logger.info(f"DATABASE_URL carregada. Host: {parsed.hostname}, Porta: {parsed.port}")
+    except Exception:
+        logger.info("DATABASE_URL carregada (não foi possível parsear o host).")
 else:
-    logger.error("DATABASE_URL não encontrada! Verifique as variáveis de ambiente.")
+    logger.error("DATABASE_URL não encontrada! Configure a variável de ambiente no Render.")
 
 
 def get_connection():
     """
-    Estabelece conexão com o banco de dados PostgreSQL (Supabase).
-    
+    Estabelece conexão com o banco de dados PostgreSQL (Supabase pooler).
+
+    IMPORTANTE: Use sempre a URL do POOLER do Supabase (não a conexão direta).
+    Pooler session mode:  postgresql://postgres.xxx:senha@aws-x.pooler.supabase.com:5432/postgres
+    Pooler transaction:   postgresql://postgres.xxx:senha@aws-x.pooler.supabase.com:6543/postgres
+
     Returns:
         psycopg2.connection: Conexão com o banco de dados
-        
+
     Raises:
         Exception: Se houver erro na conexão
     """
     if not DATABASE_URL:
-        raise Exception("DATABASE_URL não está configurada no arquivo .env")
-    
+        raise Exception("DATABASE_URL não está configurada. Configure no painel do Render.")
+
+    # Garante sslmode=require na URL sem conflito com kwargs
+    db_url = DATABASE_URL
+    if "sslmode=" not in db_url:
+        separator = "&" if "?" in db_url else "?"
+        db_url = f"{db_url}{separator}sslmode=require"
+
     try:
-        connection = psycopg2.connect(
-            DATABASE_URL,
-            sslmode="require"
-        )
+        connection = psycopg2.connect(db_url, connect_timeout=10)
         return connection
+    except psycopg2.OperationalError as e:
+        logger.exception(f"Falha de conexão com o banco. Verifique se DATABASE_URL usa o POOLER do Supabase (pooler.supabase.com), não a conexão direta (db.xxx.supabase.co). Erro: {e}")
+        raise
     except psycopg2.Error as e:
-        raise Exception(f"Erro ao conectar ao banco de dados: {str(e)}")
+        logger.exception(f"Erro psycopg2 ao conectar: {e}")
+        raise
+
+
 
 
 def sql_to_dict(cursor, query, params=None):
@@ -170,7 +188,7 @@ def get_site_config():
         data = cursor.fetchone()
 
         if data:
-            config = {
+            evento = {
                 "nome_noiva": data[0],
                 "nome_noivo": data[1],
                 "data_casamento": data[2],
@@ -179,14 +197,14 @@ def get_site_config():
                 "local_recepcao": data[5],
                 "endereco_recepcao": data[6],
             }
-            print(f"✅ Config carregada: {config}")
-            return config
+            logger.info(f"✅ Evento carregado: {evento}")
+            return evento
 
-        print("⚠️  Nenhuma configuração encontrada no banco")
+        logger.warning("⚠️  Nenhuma configuração de evento encontrada no banco")
         return None
         
     except Exception as e:
-        print(f"❌ Erro ao buscar configurações do site: {str(e)}")
+        logger.error(f"❌ Erro ao buscar configurações do evento: {str(e)}")
         return None
     finally:
         if cursor:
