@@ -18,22 +18,27 @@
                     </div>
                 {% endfor %}
             </div>
+        {% else %}
+            <div class="galeria-vazia">
+                <p>📸</p>
+                <p>As primeiras fotos aparecerão aqui em breve!</p>
+                <p>Seja o primeiro a compartilhar seus momentos especiais.</p>
+            </div>
         {% endif %}
     </div>
 </section>
 
 <style>
 .galeria-fotos {
-    padding: 100px 20px;
+    padding: 80px 20px;
     background: #ffffff;
-    min-height: 60vh;
-    display: flex;
-    align-items: center;
+    min-height: auto;
+    display: block;
 }
 
 .galeria-header {
     text-align: center;
-    margin-bottom: 80px;
+    margin-bottom: 30px;
 }
 
 .galeria-titulo {
@@ -41,13 +46,13 @@
     font-size: clamp(2rem, 5vw, 3.5rem);
     color: var(--text);
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     letter-spacing: -0.5px;
 }
 
 .galeria-subtitulo {
     font-family: var(--font-body);
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--text-soft);
     font-weight: 300;
     letter-spacing: 0.5px;
@@ -95,11 +100,11 @@
 /* Responsividade */
 @media (max-width: 768px) {
     .galeria-fotos {
-        padding: 80px 20px;
+        padding: 70px 20px;
     }
 
     .galeria-header {
-        margin-bottom: 60px;
+        margin-bottom: 40px;
     }
 
     .galeria-titulo {
@@ -221,19 +226,24 @@
 /* Galeria Vazia */
 .galeria-vazia {
     text-align: center;
-    padding: 80px 20px;
-    color: var(--serenity-light);
+    padding: 60px 20px;
+    color: var(--text-soft);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(63, 70, 80, 0.05);
+    max-width: 400px;
+    margin: 0 auto;
 }
 
 .galeria-vazia p {
-    font-size: 1.2rem;
-    margin: 15px 0;
+    font-size: 1rem;
+    margin: 10px 0;
+    font-family: var(--font-body);
 }
 
 .galeria-vazia p:first-child {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--serenity);
+    font-size: 3rem;
+    margin-bottom: 20px;
 }
 
 /* Modal Fullscreen */
