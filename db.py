@@ -57,53 +57,45 @@ def sql_to_dict(cursor, query, params=None):
 
 
 def get_presentes():
-    """
-    Busca todos os presentes ativos ordenados por ordem.
-    
-    Returns:
-        list: Lista de dicionários com os presentes
-    """
-    connection = None
-    cursor = None
+    conn = None
+    cur = None
+
     try:
-        connection = get_connection()
-        cursor = connection.cursor(cursor_factory=RealDictCursor)
-        
-        query = """
-            SELECT 
-                id,
-                titulo,
-                descricao,
-                valor_sugerido,
-                imagem,
-                pix_chave,
-                pix_tipo,
-                pix_copia_cola,
-                ordem
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT id, nome, slug, imagem, valor, status, destaque, ordem
             FROM presentes
-            WHERE ativo = true
-            ORDER BY ordem ASC
-        """
-        
-        presentes = sql_to_dict(cursor, query)
-        
-        # Renomear campos para nomes do template e formatar valores
-        for presente in presentes:
-            presente['imagem_url'] = presente.pop('imagem', None)
-            presente['chave_pix'] = presente.pop('pix_chave', None)
-            presente['tipo_chave_pix'] = presente.pop('pix_tipo', None)
-            presente['copia_cola_pix'] = presente.pop('pix_copia_cola', None)
-        
+            ORDER BY destaque DESC, ordem ASC, id ASC
+        """)
+
+        dados = cur.fetchall()
+
+        presentes = []
+        for p in dados:
+            presentes.append({
+                "id": p[0],
+                "nome": p[1],
+                "slug": p[2],
+                "imagem": p[3],
+                "valor": float(p[4]) if p[4] is not None else 0,
+                "status": p[5],
+                "destaque": p[6],
+                "ordem": p[7],
+            })
+
         return presentes
-        
-    except Exception as e:
-        print(f"Erro ao buscar presentes: {str(e)}")
-        return []
+
     finally:
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def formatar_valor_brl(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def insert_rsvp(nome, email, mensagem):

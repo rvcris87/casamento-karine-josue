@@ -1,44 +1,41 @@
-<section class="section section-light" id="presentes">
-    <div class="section-header fade-in">
-        <p class="eyebrow">Lista de presentes</p>
-        <h2>Missão: vida de casados</h2>
-        <p>
-            Criamos uma lista simbólica para quem quiser nos presentear com carinho,
-            humor e uma ajudinha no começo da nossa vida juntos 💙
-        </p>
-    </div>
+<section id="presentes" class="presentes">
+    <div class="container">
+        <h2 class="titulo-presentes">Lista de Presentes</h2>
+        <p class="subtitulo-presentes">Missão: vida de casados 💙</p>
 
-    <div class="presentes-grid">
-        <div class="presente fade-in">
-            <img src="{{ url_for('static', filename='img/presentes/panela.jpg') }}" alt="Panela de cerâmica">
-            <div class="presente-info">
-                <h3>Panela de cerâmica (bege)</h3>
-                <button class="btn-present">Presentear</button>
-            </div>
-        </div>
+        <div class="grid-presentes">
+            {% for presente in presentes %}
+            <div class="card-presente {% if presente.status == 'indisponivel' %}indisponivel{% endif %}">
+                
+                {% if presente.status == 'indisponivel' %}
+                    <span class="selo-indisponivel">Indisponível</span>
+                {% endif %}
 
-        <div class="presente destaque fade-in">
-            <img src="{{ url_for('static', filename='img/presentes/cafeteira.jpg') }}" alt="Cafeteira Oster">
-            <div class="presente-info">
-                <h3>Cafeteira Oster</h3>
-                <button class="btn-present">Presentear</button>
-            </div>
-        </div>
+                <img
+                    src="{{ url_for('static', filename='img/presentes/' ~ presente.imagem) }}"
+                    alt="{{ presente.nome }}"
+                >
 
-        <div class="presente fade-in">
-            <img src="{{ url_for('static', filename='img/presentes/geladeira.jpg') }}" alt="Geladeira">
-            <div class="presente-info">
-                <h3>Geladeira</h3>
-                <button class="btn-present">Presentear</button>
-            </div>
-        </div>
+                <h3>{{ presente.nome }}</h3>
 
-        <div class="presente fade-in">
-            <img src="{{ url_for('static', filename='img/presentes/sofa.jpg') }}" alt="Sofá">
-            <div class="presente-info">
-                <h3>Sofá</h3>
-                <button class="btn-present">Presentear</button>
+                <p class="valor">{{ presente.valor | brl }}</p>
+
+                {% if presente.status == 'disponivel' %}
+                    <button
+                        class="btn-presentear abrir-modal-presente"
+                        data-id="{{ presente.id }}"
+                        data-nome="{{ presente.nome }}"
+                        data-valor="{{ presente.valor | brl }}"
+                    >
+                        Presentear
+                    </button>
+                {% else %}
+                    <button class="btn-presentear" disabled>
+                        Indisponível
+                    </button>
+                {% endif %}
             </div>
+            {% endfor %}
         </div>
     </div>
 </section>

@@ -25,7 +25,7 @@
 
 <!-- Modal de PIX -->
 <div class="modal hidden" id="pixModal">
-    <div class="modal-overlay" id="fecharModal"></div>
+    <div class="pix-overlay" id="fecharModal"></div>
 
     <div class="modal-box">
         <button class="modal-close" id="btnFecharModal">&times;</button>
@@ -51,5 +51,43 @@
         <p class="modal-msg">Se quiser, deixe uma mensagem pra gente 💙</p>
         <p class="copy-feedback hidden" id="copyFeedback">PIX copiado com sucesso 🎉</p>
     </div>
+</div>
+
+<div class="modal-overlay" id="modalPresenteOverlay"></div>
+
+<div class="modal-presente" id="modalPresente">
+    <button class="fechar-modal" id="fecharModalPresente">&times;</button>
+
+    <p class="modal-kicker">Lista de Presentes</p>
+    <h3 id="modalPresenteNome">Nome do presente</h3>
+    <p class="modal-presente-valor" id="modalPresenteValor">R$ 0,00</p>
+
+    <form id="formPresentear" class="form-presentear">
+        <input type="hidden" id="modalPresenteId" name="presente_id">
+
+        <div class="form-group">
+            <label for="nome_pagador">Seu nome</label>
+            <input type="text" id="nome_pagador" name="nome_pagador" placeholder="Digite seu nome" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email_pagador">Seu e-mail</label>
+            <input type="email" id="email_pagador" name="email_pagador" placeholder="Digite seu e-mail" required>
+        </div>
+
+        <div class="form-group">
+            <label for="telefone_pagador">Seu telefone</label>
+            <input type="text" id="telefone_pagador" name="telefone_pagador" placeholder="(00) 00000-0000">
+        </div>
+
+        <div class="form-group">
+            <label for="mensagem_pagador">Mensagem opcional</label>
+            <textarea id="mensagem_pagador" name="mensagem_pagador" placeholder="Deixe uma mensagem para os noivos"></textarea>
+        </div>
+
+        <button type="submit" class="btn-confirmar-presente">
+            Continuar para o pagamento
+        </button>
+    </form>
 </div>
 {% endblock %}

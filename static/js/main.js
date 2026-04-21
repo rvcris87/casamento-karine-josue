@@ -183,3 +183,89 @@ function moverCarrossel(direcao) {
 setInterval(() => {
     moverCarrossel(1);
 }, 4000); // troca a cada 4 segundos
+
+/* MODAL DE PRESENTES */
+document.addEventListener('DOMContentLoaded', () => {
+    const botoesPresentear = document.querySelectorAll('.abrir-modal-presente');
+    const modalPresente = document.getElementById('modalPresente');
+    const modalPresenteOverlay = document.getElementById('modalPresenteOverlay');
+    const fecharModalPresente = document.getElementById('fecharModalPresente');
+    const modalPresenteId = document.getElementById('modalPresenteId');
+    const modalPresenteNome = document.getElementById('modalPresenteNome');
+    const modalPresenteValor = document.getElementById('modalPresenteValor');
+
+    if (modalPresente && modalPresenteOverlay) {
+
+        function abrirModalDePresente(id, nome, valor) {
+            modalPresenteId.value = id;
+            modalPresenteNome.textContent = nome;
+            modalPresenteValor.textContent = valor;
+
+            modalPresente.classList.add('ativo');
+            modalPresenteOverlay.classList.add('ativo');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function fecharModalDePresente() {
+            modalPresente.classList.remove('ativo');
+            modalPresenteOverlay.classList.remove('ativo');
+            document.body.style.overflow = '';
+        }
+
+        botoesPresentear.forEach((botao) => {
+            botao.addEventListener('click', () => {
+                abrirModalDePresente(
+                    botao.dataset.id,
+                    botao.dataset.nome,
+                    botao.dataset.valor
+                );
+            });
+        });
+
+        if (fecharModalPresente) {
+            fecharModalPresente.addEventListener('click', fecharModalDePresente);
+        }
+
+        modalPresenteOverlay.addEventListener('click', fecharModalDePresente);
+
+        const formPresentear = document.getElementById('formPresentear');
+
+        if (formPresentear) {
+            formPresentear.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const dados = {
+                    presente_id: document.getElementById('modalPresenteId').value,
+                    nome_pagador: document.getElementById('nome_pagador').value,
+                    email_pagador: document.getElementById('email_pagador').value,
+                    telefone_pagador: document.getElementById('telefone_pagador').value,
+                    mensagem_pagador: document.getElementById('mensagem_pagador').value
+                };
+
+                try {
+                    const response = await fetch("/api/presentear", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(dados)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.sucesso) {
+                        alert("Pagamento iniciado! Próximo passo: gerar PIX.");
+                        console.log(data);
+                    } else {
+                        alert("Erro ao iniciar pagamento.");
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Erro de conexão.");
+                }
+            });
+        }
+
+    }
+});

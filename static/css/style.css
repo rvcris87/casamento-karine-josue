@@ -1,13 +1,13 @@
 :root {
     --font-title: 'Playfair Display', serif;
     --font-body: 'Poppins', sans-serif;
-    
+
     --azul: #4A6FA5;
     --azul-claro: #6b8ecb;
     --branco: #ffffff;
     --cinza: #6b7280;
     --texto: #333;
-    
+
     --white: #ffffff;
     --off-white: #f8f9fb;
     --serenity: #a7c7e7;
@@ -115,6 +115,7 @@ body {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -179,12 +180,10 @@ textarea {
     right: 0;
     bottom: 0;
     height: 180px;
-    background: linear-gradient(
-        to bottom,
-        rgba(248, 249, 251, 0) 0%,
-        rgba(248, 249, 251, 0.75) 55%,
-        #f8f9fb 100%
-    );
+    background: linear-gradient(to bottom,
+            rgba(248, 249, 251, 0) 0%,
+            rgba(248, 249, 251, 0.75) 55%,
+            #f8f9fb 100%);
     z-index: 1;
 }
 
@@ -194,12 +193,10 @@ textarea {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.8) 0%,
-        rgba(255, 255, 255, 0.75) 50%,
-        rgba(255, 255, 255, 0.7) 100%
-    );
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(255, 255, 255, 0.75) 50%,
+            rgba(255, 255, 255, 0.7) 100%);
     backdrop-filter: blur(3px);
     z-index: 1;
 }
@@ -222,7 +219,7 @@ textarea {
     line-height: 1.08;
     margin: 0 0 20px 0;
     letter-spacing: -1px;
-    
+
     opacity: 0;
     animation: heroFadeUp 1.2s ease-out forwards;
 }
@@ -247,7 +244,7 @@ textarea {
     font-weight: 500;
     margin: 0 0 15px 0;
     letter-spacing: 0.5px;
-    
+
     opacity: 0;
     animation: heroFadeUp 1.2s ease-out 0.15s forwards;
 }
@@ -261,7 +258,7 @@ textarea {
     max-width: 450px;
     margin-left: auto;
     margin-right: auto;
-    
+
     opacity: 0;
     animation: heroFadeUp 1.2s ease-out 0.3s forwards;
 }
@@ -281,7 +278,7 @@ textarea {
     margin-bottom: 40px;
     border: none;
     cursor: pointer;
-    
+
     opacity: 0;
     animation: heroFadeUp 1.2s ease-out 0.45s forwards;
 }
@@ -302,7 +299,7 @@ textarea {
     justify-content: center;
     gap: 15px;
     margin-top: 20px;
-    
+
     opacity: 0;
     animation: heroFadeUp 1.2s ease-out 0.6s forwards;
 }
@@ -348,6 +345,7 @@ textarea {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -549,11 +547,11 @@ textarea {
         background: transparent;
         padding: 24px 0;
     }
-    
+
     .menu-links {
         display: flex;
     }
-    
+
     .logo {
         color: inherit;
         text-shadow: none;
@@ -618,170 +616,134 @@ textarea {
     font-size: 1rem;
 }
 
-.presentes-grid {
-    column-count: 2;
-    column-gap: 20px;
-    padding: 20px;
-    max-width: 1000px;
-    margin: 0 auto;
+.presentes {
+    padding: 80px 20px;
+    background: #f7f9fb;
 }
 
-.presente {
-    background: white;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
-    break-inside: avoid;
-    display: flex;
-    flex-direction: column;
-}
-
-.presente:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
-}
-
-.presente img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-.presente-info {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
-}
-
-.presente-info h3 {
-    font-size: 1.1rem;
-    color: #3f4a59;
-    font-weight: 600;
-    margin: 0;
+.titulo-presentes {
     text-align: center;
-    line-height: 1.4;
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #5a7fb7;
+    margin-bottom: 10px;
 }
 
-.btn-present {
-    width: 100%;
-    padding: 12px 20px;
-    border: none;
-    background: #5a7fb7;
-    color: white;
-    border-radius: 24px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(90, 127, 183, 0.3);
+.subtitulo-presentes {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 40px;
+    font-size: 1rem;
 }
 
-.btn-present:hover {
-    background: #466799;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(90, 127, 183, 0.4);
+.grid-presentes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 28px;
 }
 
-.presente.destaque {
-    border: 2px solid #5a7fb7;
+.card-presente {
+    position: relative;
+    background: #fff;
+    border: 1px solid #dbe3ea;
+    border-radius: 22px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-@media (min-width: 768px) {
-    .presentes-grid {
-        column-count: 3;
-        column-gap: 25px;
-    }
-    .presente {
-        margin-bottom: 25px;
-    }
+.card-presente:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
-@media (max-width: 480px) {
-    .presentes-grid {
-        column-count: 2;
-        column-gap: 12px;
-        padding: 12px;
-    }
-    .presente {
-        margin-bottom: 12px;
-        border-radius: 16px;
-    }
-    .presente-info {
-        padding: 16px 12px;
-        gap: 12px;
-    }
-    .presente-info h3 {
-        font-size: 0.95rem;
-    }
-    .btn-present {
-        padding: 10px 14px;
-        font-size: 0.85rem;
-    }
-}
-
-.presente-card {
-    background: white;
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: 0.25s ease;
-    display: flex;
-    flex-direction: column;
-}
-
-.presente-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-hover);
-}
-
-.presente-card img {
+.card-presente img {
     width: 100%;
     height: 220px;
-    object-fit: cover;
+    object-fit: contain;
+    border-radius: 16px;
+    background: #fff;
+    margin-bottom: 18px;
 }
 
-.presente-content {
-    padding: 22px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.presente-content h3 {
-    font-size: 1.15rem;
-    margin-bottom: 10px;
+.card-presente h3 {
+    font-size: 1.05rem;
     color: #2f3742;
-}
-
-.presente-content p {
-    color: var(--text-soft);
-    margin-bottom: 20px;
-    flex: 1;
-}
-
-.presente-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    line-height: 1.4;
+    min-height: 58px;
+    margin-bottom: 14px;
 }
 
 .valor {
-    font-size: 1.15rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: var(--serenity-strong);
+    color: #0c6b93;
+    margin-bottom: 18px;
+}
+
+.btn-presentear {
+    background: #005f86;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-presentear:hover:not(:disabled) {
+    background: #004c6b;
+}
+
+.btn-presentear:disabled {
+    background: #c9c9c9;
+    cursor: not-allowed;
+}
+
+.card-presente.indisponivel {
+    opacity: 0.72;
+}
+
+.card-presente.indisponivel img {
+    filter: grayscale(20%);
+}
+
+.selo-indisponivel {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: #d9534f;
+    color: white;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    z-index: 2;
+}
+
+@media (max-width: 768px) {
+    .grid-presentes {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .card-presente img {
+        height: 190px;
+    }
+
+    .valor {
+        font-size: 1.6rem;
+    }
 }
 
 .mensagem-box {
     width: min(760px, 92%);
     margin: 0 auto;
     text-align: center;
-    background: rgba(255,255,255,0.78);
+    background: rgba(255, 255, 255, 0.78);
     backdrop-filter: blur(8px);
     padding: 38px;
     border-radius: var(--radius);
@@ -845,7 +807,7 @@ textarea {
     background: white;
     border-radius: 28px;
     padding: 28px;
-    box-shadow: 0 24px 50px rgba(0,0,0,0.18);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
     animation: subirModal 0.25s ease;
 }
 
@@ -854,6 +816,7 @@ textarea {
         transform: translateY(14px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -1287,6 +1250,7 @@ textarea {
     background: #f6c4cc;
     transform: translateY(-2px);
 }
+
 .admin-login-page {
     min-height: 100vh;
     display: grid;
@@ -1324,11 +1288,13 @@ textarea {
 .logout-form {
     margin-top: 18px;
 }
+
 .info-evento p {
     margin-bottom: 6px;
     color: var(--text-soft);
     font-size: 1rem;
 }
+
 .info-evento strong {
     color: #2f3742;
 }
@@ -1399,10 +1365,10 @@ textarea {
 }
 
 .historia-texto {
-    background: rgba(255,255,255,0.85);
+    background: rgba(255, 255, 255, 0.85);
     border-radius: 26px;
     padding: 28px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
 }
 
 .historia-texto p {
@@ -1422,7 +1388,7 @@ textarea {
     background: white;
     border-radius: 28px;
     overflow: hidden;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
     min-height: 560px;
     display: flex;
     align-items: center;
@@ -1460,11 +1426,11 @@ textarea {
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.82);
+    background: rgba(255, 255, 255, 0.82);
     color: #5a7fb7;
     font-size: 1.2rem;
     cursor: pointer;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 .carrossel-btn.prev {
@@ -1551,5 +1517,150 @@ textarea {
 @media (min-width: 1024px) {
     .galeria-grid {
         column-count: 3 !important;
+    }
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.25s ease;
+    z-index: 9998;
+}
+
+.modal-presente {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    width: min(520px, calc(100% - 24px));
+    max-height: 90vh;
+    overflow-y: auto;
+    background: white;
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.25s ease;
+    z-index: 9999;
+}
+
+.modal-overlay.ativo,
+.modal-presente.ativo {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-presente.ativo {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.fechar-modal {
+    position: sticky;
+    top: 0;
+    margin-left: auto;
+    display: block;
+    border: none;
+    background: transparent;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #6b7280;
+    z-index: 1;
+}
+
+.modal-kicker {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #7ea0d2;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.modal-presente h3 {
+    font-size: 1.6rem;
+    color: #2f3742;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.modal-presente-valor {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0c6b93;
+    margin-bottom: 22px;
+}
+
+.form-presentear {
+    display: grid;
+    gap: 16px;
+}
+
+.form-group {
+    display: grid;
+    gap: 8px;
+    text-align: left;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #d7e0e8;
+    border-radius: 14px;
+    outline: none;
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #7ea0d2;
+    box-shadow: 0 0 0 4px rgba(126, 160, 210, 0.16);
+}
+
+.btn-confirmar-presente {
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 15px 18px;
+    background: #005f86;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.btn-confirmar-presente:hover {
+    background: #004c6b;
+}
+
+@media (max-width: 768px) {
+    .modal-presente {
+        padding: 22px 18px;
+        border-radius: 22px;
+        max-height: 92vh;
+        width: calc(100% - 16px);
+    }
+
+    .modal-presente h3 {
+        font-size: 1.35rem;
+    }
+
+    .modal-presente-valor {
+        font-size: 1.7rem;
     }
 }
