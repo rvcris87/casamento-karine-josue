@@ -1,14 +1,20 @@
 import os
+import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-print("DATABASE_URL:", os.getenv("DATABASE_URL"))
+if DATABASE_URL:
+    logger.info("DATABASE_URL carregada com sucesso.")
+else:
+    logger.error("DATABASE_URL não encontrada! Verifique as variáveis de ambiente.")
+
 
 def get_connection():
     """
