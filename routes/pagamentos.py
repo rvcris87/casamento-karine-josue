@@ -6,6 +6,7 @@ Suporta PIX, cartão de crédito e débito.
 import os
 import json
 import logging
+import time
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv
 import mercadopago
@@ -36,6 +37,46 @@ sdk = mercadopago.SDK(os.getenv("MERCADO_PAGO_ACCESS_TOKEN"))
 
 # Criar blueprint
 pagamentos_bp = Blueprint("pagamentos", __name__)
+
+
+def get_pagamentos_table_config(cur):
+    """
+    Detecta a tabela de pagamentos disponível no banco.
+    """
+    cur.execute("""
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name IN ('pagamentos_presentes', 'pagamentos_mercado_pago')
+    """)
+
+    rows = cur.fetchall()
+    tables = {}
+    for table_name, column_name in rows:
+        tables.setdefault(table_name, set()).add(column_name)
+
+    if "pagamentos_presentes" in tables:
+        return {
+            "table": "pagamentos_presentes",
+            "status_column": "status_pagamento",
+        }
+
+    if "pagamentos_mercado_pago" in tables:
+        return {
+            "table": "pagamentos_mercado_pago",
+            "status_column": "status",
+        }
+
+    raise Exception(
+        "Tabela de pagamentos não encontrada. Esperado: pagamentos_presentes ou pagamentos_mercado_pago"
+    )
+
+
+def gerar_mercado_pago_id_temporario():
+    """
+    Gera um ID temporário único antes do webhook devolver o ID real do pagamento.
+    """
+    return -int(time.time_ns())
 
 
 def get_presente_by_id(presente_id):
@@ -188,6 +229,68 @@ def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador,
         try:
             conn = get_connection()
             cur = conn.cursor()
+            table_config = get_pagamentos_table_config(cur)
+            valor = float(presente["valor_sugerido"])
+
+            if table_config["table"] == "pagamentos_presentes":
+                cur.execute("""
+                    INSERT INTO pagamentos_presentes
+                    (presente_id, nome_pagador, email_pagador, telefone_pagador,
+                     mensagem_pagador, valor, status_pagamento)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    presente_id,
+                    nome_pagador,
+                    email_pagador,
+                    telefone_pagador,
+                    mensagem_pagador,
+                    valor,
+                    "pendente"
+                ))
+
+                pagamento_id = cur.fetchone()[0]
+                conn.commit()
+
+                logger.info(f"Pagamento criado: ID {pagamento_id}, PreferÃªncia MP {preferencia_id}")
+
+                return {
+                    "sucesso": True,
+                    "init_point": init_point,
+                    "preferencia_id": preferencia_id,
+                    "pagamento_id": pagamento_id
+                }
+
+            cur.execute("""
+                INSERT INTO pagamentos_mercado_pago
+                (presente_id, mercado_pago_id, status, valor, nome_pagador,
+                 email_pagador, telefone_pagador, mensagem_pagador, preferencia_id, init_point)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                presente_id,
+                gerar_mercado_pago_id_temporario(),
+                "pending",
+                valor,
+                nome_pagador,
+                email_pagador,
+                telefone_pagador,
+                mensagem_pagador,
+                preferencia_id,
+                init_point
+            ))
+
+            pagamento_id = cur.fetchone()[0]
+            conn.commit()
+
+            logger.info(f"Pagamento criado: ID {pagamento_id}, PreferÃªncia MP {preferencia_id}")
+
+            return {
+                "sucesso": True,
+                "init_point": init_point,
+                "preferencia_id": preferencia_id,
+                "pagamento_id": pagamento_id
+            }
             
             cur.execute("""
                 INSERT INTO pagamentos_mercado_pago 
@@ -220,13 +323,15 @@ def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador,
                 "pagamento_id": pagamento_id
             }
             
-        except psycopg2.Error as e:
+        except Exception as e:
+            print("ERRO AO SALVAR:", e)
             logger.error(f"Erro ao salvar pagamento no banco: {e}")
             if conn:
                 conn.rollback()
             return {
                 "sucesso": False,
-                "erro": "Erro ao salvar pagamento"
+                "erro": str(e),
+                "tipo_erro": "salvar_pagamento"
             }
         finally:
             if cur:
@@ -456,6 +561,9 @@ def criar_pagamento():
         )
         
         if not resultado.get("sucesso"):
+            if resultado.get("tipo_erro") == "salvar_pagamento":
+                return jsonify({"erro": resultado.get("erro", "Erro ao salvar pagamento")}), 500
+
             status_code = 404 if "não encontrado" in resultado.get("erro", "").lower() else 400
             return jsonify(resultado), status_code
         
