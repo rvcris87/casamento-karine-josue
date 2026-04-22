@@ -31,7 +31,7 @@ def login_admin():
         usuario = request.form.get("usuario", "").strip()
         senha = request.form.get("senha", "").strip()
 
-        admin_user = os.getenv("ADMIN_USER")
+        admin_user = os.getenv("ADMIN_USERNAME")
         admin_password = os.getenv("ADMIN_PASSWORD")
 
         if usuario == admin_user and senha == admin_password:
