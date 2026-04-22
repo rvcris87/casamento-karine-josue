@@ -242,6 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     mensagem_pagador: document.getElementById('mensagem_pagador').value
                 };
 
+                console.log("ID enviado:", dados.presente_id);
+
                 try {
                     const response = await fetch("/api/presentear", {
                         method: "POST",

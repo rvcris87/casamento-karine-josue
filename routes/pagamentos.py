@@ -56,12 +56,25 @@ def get_presente_by_id(presente_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT id, titulo, descricao, valor_sugerido, status
+            SELECT *
             FROM presentes
             WHERE id = %s
         """, (presente_id,))
-        
-        return cur.fetchone()
+
+        presente = cur.fetchone()
+        logger.info(f"Resultado da busca do presente {presente_id}: {presente}")
+
+        if not presente:
+            return None
+
+        presente = dict(presente)
+        presente["titulo"] = presente.get("titulo") or presente.get("nome") or "Presente"
+        presente["descricao"] = presente.get("descricao") or presente.get("nome") or ""
+        presente["valor_sugerido"] = presente.get("valor_sugerido")
+        if presente["valor_sugerido"] is None:
+            presente["valor_sugerido"] = presente.get("valor")
+        presente["status"] = presente.get("status") or "disponivel"
+        return presente
         
     except psycopg2.Error as e:
         logger.error(f"Erro ao buscar presente {presente_id}: {e}")
@@ -116,6 +129,7 @@ def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador,
         }
     
     try:
+        print("ID RECEBIDO:", presente_id)
         # Criar estrutura de preferência para Mercado Pago
         preference = {
             "items": [
@@ -401,6 +415,7 @@ def criar_pagamento():
             }), 400
         
         presente_id = data.get("presente_id")
+        print("ID RECEBIDO:", presente_id)
         nome_pagador = data.get("nome_pagador", "").strip()
         email_pagador = data.get("email_pagador", "").strip()
         telefone_pagador = data.get("telefone_pagador", "").strip()
