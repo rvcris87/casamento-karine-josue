@@ -15,7 +15,7 @@ document.querySelectorAll(".menu-mobile a").forEach(link => {
 document.addEventListener("click", (e) => {
     const header = document.querySelector(".header");
     const menu = document.getElementById("menu");
-    if (!header.contains(e.target) && menu.classList.contains("active")) {
+    if (header && menu && !header.contains(e.target) && menu.classList.contains("active")) {
         menu.classList.remove("active");
     }
 });
@@ -118,6 +118,10 @@ function iniciarContagemRegressiva() {
     const horasEl = document.getElementById("horas");
     const minutosEl = document.getElementById("minutos");
     const segundosEl = document.getElementById("segundos");
+
+    if (!diasEl || !horasEl || !minutosEl) {
+        return;
+    }
 
     function atualizarContador() {
         const agora = new Date();
@@ -241,8 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     telefone_pagador: document.getElementById('telefone_pagador').value,
                     mensagem_pagador: document.getElementById('mensagem_pagador').value
                 };
-
-                console.log("ID enviado:", dados.presente_id);
 
                 try {
                     const response = await fetch("/api/presentear", {

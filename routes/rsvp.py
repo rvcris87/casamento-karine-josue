@@ -1,4 +1,5 @@
-from flask import Blueprint, request, redirect, url_for, flash
+from flask import Blueprint, flash, redirect, request, url_for
+
 from db import salvar_rsvp
 
 rsvp_bp = Blueprint("rsvp", __name__, url_prefix="/rsvp")
@@ -38,8 +39,7 @@ def enviar_rsvp():
     try:
         salvar_rsvp(nome, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao)
         flash("Confirmação enviada com sucesso! 💙", "sucesso")
-    except Exception as e:
-        print("ERRO AO SALVAR RSVP:", repr(e))
+    except Exception:
         flash("Não foi possível enviar sua confirmação agora.", "erro")
 
     return redirect(url_for("main.index") + "#rsvp")

@@ -152,7 +152,7 @@ def insert_rsvp(nome, email, mensagem):
         return True
         
     except Exception as e:
-        print(f"Erro ao inserir RSVP: {str(e)}")
+        logger.exception(f"Erro ao inserir RSVP: {e}")
         if connection:
             connection.rollback()
         return False
@@ -221,18 +221,15 @@ def salvar_foto_convidado(nome_convidado, legenda, imagem_url):
         conn = get_connection()
         cur = conn.cursor()
 
-        print("SALVANDO FOTO:", nome_convidado, legenda, imagem_url)
-
         cur.execute("""
             INSERT INTO fotos_convidados (nome_convidado, legenda, imagem_url, status)
             VALUES (%s, %s, %s, 'aprovado')
         """, (nome_convidado, legenda, imagem_url))
 
         conn.commit()
-        print("FOTO SALVA COM SUCESSO")
 
     except Exception as e:
-        print("ERRO REAL DO BANCO:", repr(e))
+        logger.exception(f"Erro ao salvar foto do convidado: {e}")
         raise
 
     finally:
@@ -268,7 +265,7 @@ def get_fotos_aprovadas():
         return [dict(foto) for foto in fotos] if fotos else []
         
     except Exception as e:
-        print(f"❌ Erro ao buscar fotos aprovadas: {str(e)}")
+        logger.exception(f"Erro ao buscar fotos aprovadas: {e}")
         return []
     finally:
         if cursor:
@@ -303,7 +300,7 @@ def get_fotos_pendentes():
         return [dict(foto) for foto in fotos] if fotos else []
         
     except Exception as e:
-        print(f"❌ Erro ao buscar fotos pendentes: {str(e)}")
+        logger.exception(f"Erro ao buscar fotos pendentes: {e}")
         return []
     finally:
         if cursor:
@@ -340,7 +337,7 @@ def aprovar_foto(foto_id):
         return cursor.rowcount > 0
         
     except Exception as e:
-        print(f"❌ Erro ao aprovar foto: {str(e)}")
+        logger.exception(f"Erro ao aprovar foto: {e}")
         if connection:
             connection.rollback()
         return False
@@ -379,7 +376,7 @@ def rejeitar_foto(foto_id):
         return cursor.rowcount > 0
         
     except Exception as e:
-        print(f"❌ Erro ao rejeitar foto: {str(e)}")
+        logger.exception(f"Erro ao rejeitar foto: {e}")
         if connection:
             connection.rollback()
         return False

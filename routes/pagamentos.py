@@ -1,54 +1,42 @@
 """
-Integração com Mercado Pago para pagamento de presentes.
-Suporta PIX, cartão de crédito e débito.
+Integracao com Mercado Pago para pagamento de presentes.
+Suporta PIX, cartao de credito e debito.
 """
 
-import os
 import json
 import logging
+import os
 import time
-from flask import Blueprint, request, jsonify, render_template
-from dotenv import load_dotenv
+
 import mercadopago
 import psycopg2
+from dotenv import load_dotenv
+from flask import Blueprint, jsonify, render_template, request
 from psycopg2.extras import RealDictCursor
+
 from db import get_connection
 
 load_dotenv()
 
-# Configuração de logging
 logger = logging.getLogger(__name__)
 
-# Credenciais do Mercado Pago (modo teste)
-MERCADO_PAGO_ACCESS_TOKEN = os.getenv(
-    "MERCADO_PAGO_ACCESS_TOKEN",
-    "APP_USR-7108049560326594-042212-ee879f6a87885115519a5fed61ab8c04-3352130635"
-)
-MERCADO_PAGO_PUBLIC_KEY = os.getenv(
-    "MERCADO_PAGO_PUBLIC_KEY",
-    "APP_USR-583c2032-5036-4f0f-a2f8-c6cef74d0347"
-)
-
-# URL base para callbacks (será configurada em produção)
+MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
 
-# Inicializar SDK do Mercado Pago
-sdk = mercadopago.SDK(os.getenv("MERCADO_PAGO_ACCESS_TOKEN"))
-
-# Criar blueprint
+sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
 pagamentos_bp = Blueprint("pagamentos", __name__)
 
 
 def get_pagamentos_table_config(cur):
-    """
-    Detecta a tabela de pagamentos disponível no banco.
-    """
-    cur.execute("""
+    """Detecta a tabela de pagamentos disponivel no banco."""
+    cur.execute(
+        """
         SELECT table_name, column_name
         FROM information_schema.columns
         WHERE table_schema = 'public'
           AND table_name IN ('pagamentos_presentes', 'pagamentos_mercado_pago')
-    """)
+        """
+    )
 
     rows = cur.fetchall()
     tables = {}
@@ -56,54 +44,40 @@ def get_pagamentos_table_config(cur):
         tables.setdefault(table_name, set()).add(column_name)
 
     if "pagamentos_presentes" in tables:
-        return {
-            "table": "pagamentos_presentes",
-            "status_column": "status_pagamento",
-        }
+        return {"table": "pagamentos_presentes"}
 
     if "pagamentos_mercado_pago" in tables:
-        return {
-            "table": "pagamentos_mercado_pago",
-            "status_column": "status",
-        }
+        return {"table": "pagamentos_mercado_pago"}
 
     raise Exception(
-        "Tabela de pagamentos não encontrada. Esperado: pagamentos_presentes ou pagamentos_mercado_pago"
+        "Tabela de pagamentos nao encontrada. Esperado: pagamentos_presentes ou pagamentos_mercado_pago"
     )
 
 
 def gerar_mercado_pago_id_temporario():
-    """
-    Gera um ID temporário único antes do webhook devolver o ID real do pagamento.
-    """
+    """Gera um ID temporario unico antes do webhook devolver o ID real."""
     return -int(time.time_ns())
 
 
 def get_presente_by_id(presente_id):
-    """
-    Busca um presente no banco de dados pelo ID.
-    
-    Args:
-        presente_id (int): ID do presente
-        
-    Returns:
-        dict: Dados do presente ou None se não encontrado
-    """
+    """Busca um presente no banco de dados pelo ID."""
     conn = None
     cur = None
-    
+
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
+        cur.execute(
+            """
             SELECT *
             FROM presentes
             WHERE id = %s
-        """, (presente_id,))
+            """,
+            (presente_id,),
+        )
 
         presente = cur.fetchone()
-        logger.info(f"Resultado da busca do presente {presente_id}: {presente}")
+        logger.info("Resultado da busca do presente %s: %s", presente_id, presente)
 
         if not presente:
             return None
@@ -116,9 +90,9 @@ def get_presente_by_id(presente_id):
             presente["valor_sugerido"] = presente.get("valor")
         presente["status"] = presente.get("status") or "disponivel"
         return presente
-        
+
     except psycopg2.Error as e:
-        logger.error(f"Erro ao buscar presente {presente_id}: {e}")
+        logger.error("Erro ao buscar presente %s: %s", presente_id, e)
         return None
     finally:
         if cur:
@@ -127,51 +101,114 @@ def get_presente_by_id(presente_id):
             conn.close()
 
 
-def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador, 
-                                  telefone_pagador, mensagem_pagador):
-    """
-    Cria uma preferência de pagamento no Mercado Pago para um presente.
-    
-    Args:
-        presente_id (int): ID do presente
-        nome_pagador (str): Nome de quem está presenteando
-        email_pagador (str): Email de quem está presenteando
-        telefone_pagador (str): Telefone de quem está presenteando
-        mensagem_pagador (str): Mensagem opcional
-        
-    Returns:
-        dict: Contém init_point (link de pagamento) e preferencia_id, ou erro
-    """
-    
-    # Validações básicas
+def salvar_pagamento_no_banco(
+    presente_id,
+    nome_pagador,
+    email_pagador,
+    telefone_pagador,
+    mensagem_pagador,
+    valor,
+    preferencia_id,
+    init_point,
+):
+    """Salva o pagamento na tabela de pagamentos disponivel."""
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        table_config = get_pagamentos_table_config(cur)
+
+        if table_config["table"] == "pagamentos_presentes":
+            cur.execute(
+                """
+                INSERT INTO pagamentos_presentes
+                (presente_id, nome_pagador, email_pagador, telefone_pagador,
+                 mensagem_pagador, valor, status_pagamento)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    presente_id,
+                    nome_pagador,
+                    email_pagador,
+                    telefone_pagador,
+                    mensagem_pagador,
+                    valor,
+                    "pendente",
+                ),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO pagamentos_mercado_pago
+                (presente_id, mercado_pago_id, status, valor, nome_pagador,
+                 email_pagador, telefone_pagador, mensagem_pagador, preferencia_id, init_point)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    presente_id,
+                    gerar_mercado_pago_id_temporario(),
+                    "pending",
+                    valor,
+                    nome_pagador,
+                    email_pagador,
+                    telefone_pagador,
+                    mensagem_pagador,
+                    preferencia_id,
+                    init_point,
+                ),
+            )
+
+        pagamento_id = cur.fetchone()[0]
+        conn.commit()
+        return pagamento_id
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.exception("Erro ao salvar pagamento no banco: %s", e)
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def criar_pagamento_mercado_pago(
+    presente_id,
+    nome_pagador,
+    email_pagador,
+    telefone_pagador,
+    mensagem_pagador,
+):
+    """Cria uma preferencia de pagamento no Mercado Pago para um presente."""
     if not presente_id or not nome_pagador or not email_pagador:
         logger.warning("Dados incompletos para criar pagamento")
         return {
             "sucesso": False,
-            "erro": "Nome, email e presente são obrigatórios"
+            "erro": "Nome, email e presente sao obrigatorios",
         }
-    
-    # Buscar presente no banco
+
     presente = get_presente_by_id(presente_id)
-    
     if not presente:
-        logger.warning(f"Presente {presente_id} não encontrado")
+        logger.warning("Presente %s nao encontrado", presente_id)
         return {
             "sucesso": False,
-            "erro": "Presente não encontrado"
+            "erro": "Presente nao encontrado",
         }
-    
-    # Verificar se presente já foi presenteado
+
     if presente.get("status") == "indisponivel":
-        logger.warning(f"Presente {presente_id} já foi presenteado")
+        logger.warning("Presente %s ja foi presenteado", presente_id)
         return {
             "sucesso": False,
-            "erro": "Este presente já foi presenteado"
+            "erro": "Este presente ja foi presenteado",
         }
-    
+
     try:
-        print("ID RECEBIDO:", presente_id)
-        # Criar estrutura de preferência para Mercado Pago
+        valor = float(presente["valor_sugerido"])
         preference = {
             "items": [
                 {
@@ -179,199 +216,93 @@ def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador,
                     "description": presente["descricao"][:100] if presente["descricao"] else "",
                     "quantity": 1,
                     "currency_id": "BRL",
-                    "unit_price": float(presente["valor_sugerido"])
+                    "unit_price": valor,
                 }
             ],
             "payer": {
                 "name": nome_pagador,
                 "email": email_pagador,
-                "phone": {
-                    "number": telefone_pagador
-                }
+                "phone": {"number": telefone_pagador},
             },
             "back_urls": {
                 "success": f"{BASE_URL}/pagamento/sucesso",
                 "failure": f"{BASE_URL}/pagamento/falha",
-                "pending": f"{BASE_URL}/pagamento/pendente"
+                "pending": f"{BASE_URL}/pagamento/pendente",
             },
             "notification_url": f"{BASE_URL}/webhook/mercado_pago",
             "external_reference": f"presente_{presente_id}_{email_pagador}",
             "auto_return": "all",
             "payment_methods": {
-                "installments": 1  # Apenas pagamento à vista
-            }
+                "installments": 1,
+            },
         }
-        
-        # Criar preferência no Mercado Pago
+
         response = sdk.preference().create(preference)
-        
         if response["status"] != 201:
-            logger.error(f"Erro ao criar preferência MP: {response}")
+            logger.error("Erro ao criar preferencia MP: %s", response)
             return {
                 "sucesso": False,
-                "erro": "Erro ao processar pagamento"
+                "erro": "Erro ao processar pagamento",
             }
-        
+
         preference_data = response["response"]
         preferencia_id = preference_data["id"]
         init_point = preference_data["init_point"]
-        
-        # Salvar informações do pagamento no banco (status = pending)
-        conn = None
-        cur = None
-        
+
         try:
-            conn = get_connection()
-            cur = conn.cursor()
-            table_config = get_pagamentos_table_config(cur)
-            valor = float(presente["valor_sugerido"])
-
-            if table_config["table"] == "pagamentos_presentes":
-                cur.execute("""
-                    INSERT INTO pagamentos_presentes
-                    (presente_id, nome_pagador, email_pagador, telefone_pagador,
-                     mensagem_pagador, valor, status_pagamento)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (
-                    presente_id,
-                    nome_pagador,
-                    email_pagador,
-                    telefone_pagador,
-                    mensagem_pagador,
-                    valor,
-                    "pendente"
-                ))
-
-                pagamento_id = cur.fetchone()[0]
-                conn.commit()
-
-                logger.info(f"Pagamento criado: ID {pagamento_id}, PreferÃªncia MP {preferencia_id}")
-
-                return {
-                    "sucesso": True,
-                    "init_point": init_point,
-                    "preferencia_id": preferencia_id,
-                    "pagamento_id": pagamento_id
-                }
-
-            cur.execute("""
-                INSERT INTO pagamentos_mercado_pago
-                (presente_id, mercado_pago_id, status, valor, nome_pagador,
-                 email_pagador, telefone_pagador, mensagem_pagador, preferencia_id, init_point)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
+            pagamento_id = salvar_pagamento_no_banco(
                 presente_id,
-                gerar_mercado_pago_id_temporario(),
-                "pending",
+                nome_pagador,
+                email_pagador,
+                telefone_pagador,
+                mensagem_pagador,
                 valor,
-                nome_pagador,
-                email_pagador,
-                telefone_pagador,
-                mensagem_pagador,
                 preferencia_id,
-                init_point
-            ))
-
-            pagamento_id = cur.fetchone()[0]
-            conn.commit()
-
-            logger.info(f"Pagamento criado: ID {pagamento_id}, PreferÃªncia MP {preferencia_id}")
-
-            return {
-                "sucesso": True,
-                "init_point": init_point,
-                "preferencia_id": preferencia_id,
-                "pagamento_id": pagamento_id
-            }
-            
-            cur.execute("""
-                INSERT INTO pagamentos_mercado_pago 
-                (presente_id, mercado_pago_id, status, valor, nome_pagador, 
-                 email_pagador, telefone_pagador, mensagem_pagador, preferencia_id, init_point)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                presente_id,
-                0,  # Será atualizado quando receber callback
-                "pending",
-                float(presente["valor_sugerido"]),
-                nome_pagador,
-                email_pagador,
-                telefone_pagador,
-                mensagem_pagador,
-                preferencia_id,
-                init_point
-            ))
-            
-            pagamento_id = cur.fetchone()[0]
-            conn.commit()
-            
-            logger.info(f"Pagamento criado: ID {pagamento_id}, Preferência MP {preferencia_id}")
-            
-            return {
-                "sucesso": True,
-                "init_point": init_point,
-                "preferencia_id": preferencia_id,
-                "pagamento_id": pagamento_id
-            }
-            
+                init_point,
+            )
         except Exception as e:
-            print("ERRO AO SALVAR:", e)
-            logger.error(f"Erro ao salvar pagamento no banco: {e}")
-            if conn:
-                conn.rollback()
             return {
                 "sucesso": False,
                 "erro": str(e),
-                "tipo_erro": "salvar_pagamento"
+                "tipo_erro": "salvar_pagamento",
             }
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
-        
+
+        logger.info("Pagamento criado: ID %s, Preferencia MP %s", pagamento_id, preferencia_id)
+        return {
+            "sucesso": True,
+            "init_point": init_point,
+            "preferencia_id": preferencia_id,
+            "pagamento_id": pagamento_id,
+        }
     except Exception as e:
-        logger.error(f"Erro ao criar preferência Mercado Pago: {e}")
+        logger.error("Erro ao criar preferencia Mercado Pago: %s", e, exc_info=True)
         return {
             "sucesso": False,
-            "erro": "Erro ao processar pagamento"
+            "erro": "Erro ao processar pagamento",
         }
 
 
 def atualizar_status_presente(presente_id, novo_status):
-    """
-    Atualiza o status de um presente no banco de dados.
-    
-    Args:
-        presente_id (int): ID do presente
-        novo_status (str): Novo status ('disponivel' ou 'indisponivel')
-        
-    Returns:
-        bool: True se atualizado com sucesso, False caso contrário
-    """
+    """Atualiza o status de um presente no banco de dados."""
     conn = None
     cur = None
-    
+
     try:
         conn = get_connection()
         cur = conn.cursor()
-        
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE presentes
             SET status = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
-        """, (novo_status, presente_id))
-        
+            """,
+            (novo_status, presente_id),
+        )
         conn.commit()
-        
-        logger.info(f"Presente {presente_id} atualizado para status: {novo_status}")
+        logger.info("Presente %s atualizado para status: %s", presente_id, novo_status)
         return True
-        
     except psycopg2.Error as e:
-        logger.error(f"Erro ao atualizar status do presente {presente_id}: {e}")
+        logger.error("Erro ao atualizar status do presente %s: %s", presente_id, e)
         if conn:
             conn.rollback()
         return False
@@ -383,45 +314,33 @@ def atualizar_status_presente(presente_id, novo_status):
 
 
 def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, metodo=None):
-    """
-    Atualiza o status de um pagamento no banco de dados.
-    
-    Args:
-        preferencia_id (str): ID da preferência no Mercado Pago
-        mercado_pago_id (int): ID do pagamento no Mercado Pago
-        novo_status (str): Novo status (pending, approved, cancelled, refunded)
-        metodo (str): Método de pagamento utilizado
-        
-    Returns:
-        dict: Contém presente_id se atualizado com sucesso
-    """
+    """Atualiza o status de um pagamento no banco de dados."""
     conn = None
     cur = None
-    
+
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Atualizar pagamento
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE pagamentos_mercado_pago
             SET status = %s, mercado_pago_id = %s, metodo_pagamento = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE preferencia_id = %s
             RETURNING presente_id
-        """, (novo_status, mercado_pago_id, metodo or "desconhecido", preferencia_id))
-        
+            """,
+            (novo_status, mercado_pago_id, metodo or "desconhecido", preferencia_id),
+        )
         resultado = cur.fetchone()
         conn.commit()
-        
+
         if resultado:
             return {"presente_id": resultado["presente_id"]}
-        else:
-            logger.warning(f"Pagamento com preferencia_id {preferencia_id} não encontrado")
-            return {}
-        
+
+        logger.warning("Pagamento com preferencia_id %s nao encontrado", preferencia_id)
+        return {}
     except psycopg2.Error as e:
-        logger.error(f"Erro ao atualizar pagamento {preferencia_id}: {e}")
+        logger.error("Erro ao atualizar pagamento %s: %s", preferencia_id, e)
         if conn:
             conn.rollback()
         return {}
@@ -433,40 +352,31 @@ def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, met
 
 
 def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json, erro=None):
-    """
-    Registra uma notificação de webhook para auditoria e debugging.
-    
-    Args:
-        mercado_pago_id (int): ID do pagamento
-        tipo_notificacao (str): Tipo de notificação (payment, plan, etc)
-        status (str): Status da notificação
-        dados_json (dict): Dados completos da notificação
-        erro (str): Descrição de erro se houver
-    """
+    """Registra uma notificacao de webhook para auditoria e debugging."""
     conn = None
     cur = None
-    
+
     try:
         conn = get_connection()
         cur = conn.cursor()
-        
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO webhook_logs
             (mercado_pago_id, tipo_notificacao, status, dados_json, erro)
             VALUES (%s, %s, %s, %s, %s)
-        """, (
-            mercado_pago_id,
-            tipo_notificacao,
-            status,
-            json.dumps(dados_json),
-            erro
-        ))
-        
+            """,
+            (
+                mercado_pago_id,
+                tipo_notificacao,
+                status,
+                json.dumps(dados_json),
+                erro,
+            ),
+        )
         conn.commit()
-        logger.info(f"Webhook registrado: MP ID {mercado_pago_id}, Tipo {tipo_notificacao}")
-        
+        logger.info("Webhook registrado: MP ID %s, Tipo %s", mercado_pago_id, tipo_notificacao)
     except psycopg2.Error as e:
-        logger.error(f"Erro ao registrar webhook log: {e}")
+        logger.error("Erro ao registrar webhook log: %s", e)
         if conn:
             conn.rollback()
     finally:
@@ -476,267 +386,183 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
             conn.close()
 
 
-# ============================================================================
-# ROTAS FLASK
-# ============================================================================
-
 @pagamentos_bp.route("/api/presentear", methods=["POST"])
 def criar_pagamento():
-    """
-    Cria um link de pagamento no Mercado Pago para um presente.
-    
-    Recebe dados do pagador (nome, email, telefone, mensagem).
-    Retorna o init_point (link de redirecionamento para pagamento).
-    
-    URL de uso no frontend:
-        POST /criar_pagamento/<presente_id>
-        Content-Type: application/json
-        {
-            "nome_pagador": "João Silva",
-            "email_pagador": "joao@email.com",
-            "telefone_pagador": "11999999999",
-            "mensagem_pagador": "Mensagem opcional"
-        }
-    
-    Respostas:
-        200: {"sucesso": true, "init_point": "...", "preferencia_id": "..."}
-        400: {"sucesso": false, "erro": "..."}
-        404: {"sucesso": false, "erro": "Presente não encontrado"}
-    """
-    
+    """Cria um link de pagamento no Mercado Pago para um presente."""
     try:
         data = request.get_json(silent=True)
-        
         if not data:
-            return jsonify({
-                "sucesso": False,
-                "erro": "Dados JSON inválidos"
-            }), 400
-        
+            return jsonify({"sucesso": False, "erro": "Dados JSON invalidos"}), 400
+
         presente_id = data.get("presente_id")
-        print("ID RECEBIDO:", presente_id)
         nome_pagador = data.get("nome_pagador", "").strip()
         email_pagador = data.get("email_pagador", "").strip()
         telefone_pagador = data.get("telefone_pagador", "").strip()
         mensagem_pagador = data.get("mensagem_pagador", "").strip()
 
         if not presente_id:
-            return jsonify({
-                "sucesso": False,
-                "erro": "Presente é obrigatório"
-            }), 400
-        
-        # Validações
+            return jsonify({"sucesso": False, "erro": "Presente e obrigatorio"}), 400
+
         if not nome_pagador:
-            return jsonify({
-                "sucesso": False,
-                "erro": "Nome do pagador é obrigatório"
-            }), 400
-        
+            return jsonify({"sucesso": False, "erro": "Nome do pagador e obrigatorio"}), 400
+
         if not email_pagador or "@" not in email_pagador:
-            return jsonify({
-                "sucesso": False,
-                "erro": "Email válido é obrigatório"
-            }), 400
-        
+            return jsonify({"sucesso": False, "erro": "Email valido e obrigatorio"}), 400
+
         if not telefone_pagador:
-            return jsonify({
-                "sucesso": False,
-                "erro": "Telefone é obrigatório"
-            }), 400
-        
-        # Criar pagamento no Mercado Pago
+            return jsonify({"sucesso": False, "erro": "Telefone e obrigatorio"}), 400
+
         resultado = criar_pagamento_mercado_pago(
             int(presente_id),
             nome_pagador,
             email_pagador,
             telefone_pagador,
-            mensagem_pagador
+            mensagem_pagador,
         )
-        
+
         if not resultado.get("sucesso"):
             if resultado.get("tipo_erro") == "salvar_pagamento":
                 return jsonify({"erro": resultado.get("erro", "Erro ao salvar pagamento")}), 500
 
-            status_code = 404 if "não encontrado" in resultado.get("erro", "").lower() else 400
+            status_code = 404 if "nao encontrado" in resultado.get("erro", "").lower() else 400
             return jsonify(resultado), status_code
-        
-        logger.info(f"Pagamento criado com sucesso: Presente {presente_id}, Email {email_pagador}")
-        
-        return jsonify({
-            "sucesso": True,
-            "checkout_url": resultado["init_point"]
-        }), 200
-        
+
+        logger.info("Pagamento criado com sucesso: Presente %s, Email %s", presente_id, email_pagador)
+        return jsonify({"sucesso": True, "checkout_url": resultado["init_point"]}), 200
     except Exception as e:
-        print(f"Erro ao criar pagamento: {e}")
-        logger.error(f"Erro ao criar pagamento: {e}", exc_info=True)
-        return jsonify({
-            "erro": str(e)
-        }), 500
+        logger.error("Erro ao criar pagamento: %s", e, exc_info=True)
+        return jsonify({"erro": str(e)}), 500
 
 
 @pagamentos_bp.route("/webhook/mercado_pago", methods=["POST"])
 def webhook_mercado_pago():
-    """
-    Webhook para receber notificações de pagamento do Mercado Pago.
-    
-    Mercado Pago envia notificações em dois formatos:
-    1. IPN (Instant Payment Notification) - topic=payment
-    2. Webhooks - topic=payment
-    
-    Atualiza o status do presente para "indisponivel" quando pagamento é aprovado.
-    """
-    
+    """Webhook para receber notificacoes de pagamento do Mercado Pago."""
     try:
-        # Mercado Pago envia a notificação como form data, não JSON
         data = request.form if request.form else request.get_json()
-        
+
         tipo_notificacao = data.get("type") or data.get("topic")
         mercado_pago_id = data.get("id")
-        
-        logger.info(f"Webhook recebido: Tipo {tipo_notificacao}, ID {mercado_pago_id}")
-        
-        # Registrar webhook para auditoria
+        logger.info("Webhook recebido: Tipo %s, ID %s", tipo_notificacao, mercado_pago_id)
+
         registrar_webhook_log(
             mercado_pago_id,
             tipo_notificacao,
             "recebido",
-            data.to_dict() if hasattr(data, 'to_dict') else dict(data)
+            data.to_dict() if hasattr(data, "to_dict") else dict(data),
         )
-        
-        # Processar apenas notificações de pagamento
+
         if tipo_notificacao != "payment":
-            logger.warning(f"Notificação ignorada: tipo {tipo_notificacao}")
+            logger.warning("Notificacao ignorada: tipo %s", tipo_notificacao)
             return jsonify({"recebido": True}), 200
-        
-        # Buscar detalhes do pagamento no Mercado Pago
+
         payment_response = sdk.payment().get(mercado_pago_id)
-        
         if payment_response["status"] != 200:
-            logger.error(f"Erro ao consultar pagamento {mercado_pago_id}: {payment_response}")
+            logger.error("Erro ao consultar pagamento %s: %s", mercado_pago_id, payment_response)
             registrar_webhook_log(
                 mercado_pago_id,
                 tipo_notificacao,
                 "erro_consulta",
-                data.to_dict() if hasattr(data, 'to_dict') else dict(data),
-                "Erro ao consultar pagamento no MP"
+                data.to_dict() if hasattr(data, "to_dict") else dict(data),
+                "Erro ao consultar pagamento no MP",
             )
             return jsonify({"recebido": True}), 200
-        
+
         payment = payment_response["response"]
-        status_pagamento = payment.get("status")  # pending, approved, rejected, cancelled, refunded, in_process, in_mediation
+        status_pagamento = payment.get("status")
         preferencia_id = payment.get("preference_id")
         metodo_pagamento = payment.get("payment_method", {}).get("type", "desconhecido")
-        
-        logger.info(f"Pagamento {mercado_pago_id}: Status {status_pagamento}, Preferência {preferencia_id}")
-        
-        # Atualizar status do pagamento no banco
+
+        logger.info(
+            "Pagamento %s: Status %s, Preferencia %s",
+            mercado_pago_id,
+            status_pagamento,
+            preferencia_id,
+        )
+
         resultado_update = atualizar_pagamento_status(
             preferencia_id,
             mercado_pago_id,
             status_pagamento,
-            metodo_pagamento
+            metodo_pagamento,
         )
-        
         presente_id = resultado_update.get("presente_id")
-        
-        # Se pagamento foi aprovado, marcar presente como indisponível
+
         if status_pagamento == "approved" and presente_id:
             sucesso = atualizar_status_presente(presente_id, "indisponivel")
-            
             if sucesso:
-                logger.info(f"Presente {presente_id} marcado como indisponível (pagamento aprovado)")
+                logger.info(
+                    "Presente %s marcado como indisponivel (pagamento aprovado)",
+                    presente_id,
+                )
                 registrar_webhook_log(
                     mercado_pago_id,
                     tipo_notificacao,
                     "processado",
-                    data.to_dict() if hasattr(data, 'to_dict') else dict(data)
+                    data.to_dict() if hasattr(data, "to_dict") else dict(data),
                 )
             else:
-                logger.error(f"Erro ao atualizar presente {presente_id} para indisponível")
+                logger.error("Erro ao atualizar presente %s para indisponivel", presente_id)
                 registrar_webhook_log(
                     mercado_pago_id,
                     tipo_notificacao,
                     "erro_update_presente",
-                    data.to_dict() if hasattr(data, 'to_dict') else dict(data),
-                    f"Erro ao atualizar presente {presente_id}"
+                    data.to_dict() if hasattr(data, "to_dict") else dict(data),
+                    f"Erro ao atualizar presente {presente_id}",
                 )
-        
         elif status_pagamento in ["cancelled", "refunded"] and presente_id:
-            # Se pagamento foi cancelado/reembolsado, marcar presente como disponível novamente
             sucesso = atualizar_status_presente(presente_id, "disponivel")
-            
             if sucesso:
-                logger.info(f"Presente {presente_id} marcado como disponível (pagamento cancelado)")
+                logger.info(
+                    "Presente %s marcado como disponivel (pagamento cancelado)",
+                    presente_id,
+                )
             else:
-                logger.error(f"Erro ao atualizar presente {presente_id} para disponível")
-        
+                logger.error("Erro ao atualizar presente %s para disponivel", presente_id)
+
         return jsonify({"recebido": True}), 200
-        
     except Exception as e:
-        logger.error(f"Erro ao processar webhook: {e}", exc_info=True)
-        return jsonify({
-            "recebido": False,
-            "erro": str(e)
-        }), 500
+        logger.error("Erro ao processar webhook: %s", e, exc_info=True)
+        return jsonify({"recebido": False, "erro": str(e)}), 500
 
 
 @pagamentos_bp.route("/pagamento/sucesso", methods=["GET"])
 def pagamento_sucesso():
-    """
-    Página de redirecionamento após pagamento bem-sucedido.
-    (Opcional - Mercado Pago redireciona aqui)
-    """
     return render_template("pagamento_sucesso.html"), 200
 
 
 @pagamentos_bp.route("/pagamento/falha", methods=["GET"])
 def pagamento_falha():
-    """
-    Página de redirecionamento após falha no pagamento.
-    (Opcional - Mercado Pago redireciona aqui)
-    """
     return render_template("pagamento_falha.html"), 200
 
 
 @pagamentos_bp.route("/pagamento/pendente", methods=["GET"])
 def pagamento_pendente():
-    """
-    Página de redirecionamento para pagamento pendente.
-    (Opcional - Mercado Pago redireciona aqui)
-    """
     return render_template("pagamento_pendente.html"), 200
 
 
 @pagamentos_bp.route("/api/status_pagamento/<int:presente_id>", methods=["GET"])
 def status_pagamento_endpoint(presente_id):
-    """
-    Retorna o status de pagamento de um presente (para verificação no frontend).
-    """
+    """Retorna o status de pagamento de um presente."""
     conn = None
     cur = None
-    
+
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cur.execute("""
+        cur.execute(
+            """
             SELECT status FROM presentes WHERE id = %s
-        """, (presente_id,))
-        
+            """,
+            (presente_id,),
+        )
         resultado = cur.fetchone()
-        
+
         if not resultado:
-            return jsonify({"erro": "Presente não encontrado"}), 404
-        
-        return jsonify({
-            "presente_id": presente_id,
-            "status": resultado["status"]
-        }), 200
-        
+            return jsonify({"erro": "Presente nao encontrado"}), 404
+
+        return jsonify({"presente_id": presente_id, "status": resultado["status"]}), 200
     except psycopg2.Error as e:
-        logger.error(f"Erro ao consultar status do presente {presente_id}: {e}")
+        logger.error("Erro ao consultar status do presente %s: %s", presente_id, e)
         return jsonify({"erro": "Erro ao consultar status"}), 500
     finally:
         if cur:
