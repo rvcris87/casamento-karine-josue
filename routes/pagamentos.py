@@ -7,7 +7,7 @@ import os
 import json
 import logging
 import time
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from dotenv import load_dotenv
 import mercadopago
 import psycopg2
@@ -190,20 +190,14 @@ def criar_pagamento_mercado_pago(presente_id, nome_pagador, email_pagador,
                 }
             },
             "back_urls": {
-                "success": f"{BASE_URL}/sucesso_pagamento",
-                "failure": f"{BASE_URL}/falha_pagamento",
-                "pending": f"{BASE_URL}/pagamento_pendente"
+                "success": f"{BASE_URL}/pagamento/sucesso",
+                "failure": f"{BASE_URL}/pagamento/falha",
+                "pending": f"{BASE_URL}/pagamento/pendente"
             },
             "notification_url": f"{BASE_URL}/webhook/mercado_pago",
             "external_reference": f"presente_{presente_id}_{email_pagador}",
-            "auto_return": "approved",
+            "auto_return": "all",
             "payment_methods": {
-                "excluded_payment_methods": [
-                    {"id": "atm"}
-                ],
-                "excluded_payment_types": [
-                    {"id": "atm"}
-                ],
                 "installments": 1  # Apenas pagamento à vista
             }
         }
@@ -688,40 +682,31 @@ def webhook_mercado_pago():
         }), 500
 
 
-@pagamentos_bp.route("/sucesso_pagamento", methods=["GET"])
-def sucesso_pagamento():
+@pagamentos_bp.route("/pagamento/sucesso", methods=["GET"])
+def pagamento_sucesso():
     """
     Página de redirecionamento após pagamento bem-sucedido.
     (Opcional - Mercado Pago redireciona aqui)
     """
-    return jsonify({
-        "mensagem": "Pagamento realizado com sucesso!",
-        "status": "sucesso"
-    }), 200
+    return render_template("pagamento_sucesso.html"), 200
 
 
-@pagamentos_bp.route("/falha_pagamento", methods=["GET"])
-def falha_pagamento():
+@pagamentos_bp.route("/pagamento/falha", methods=["GET"])
+def pagamento_falha():
     """
     Página de redirecionamento após falha no pagamento.
     (Opcional - Mercado Pago redireciona aqui)
     """
-    return jsonify({
-        "mensagem": "Pagamento foi recusado",
-        "status": "falha"
-    }), 200
+    return render_template("pagamento_falha.html"), 200
 
 
-@pagamentos_bp.route("/pagamento_pendente", methods=["GET"])
+@pagamentos_bp.route("/pagamento/pendente", methods=["GET"])
 def pagamento_pendente():
     """
     Página de redirecionamento para pagamento pendente.
     (Opcional - Mercado Pago redireciona aqui)
     """
-    return jsonify({
-        "mensagem": "Pagamento aguardando processamento",
-        "status": "pendente"
-    }), 200
+    return render_template("pagamento_pendente.html"), 200
 
 
 @pagamentos_bp.route("/api/status_pagamento/<int:presente_id>", methods=["GET"])
