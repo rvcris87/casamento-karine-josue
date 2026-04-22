@@ -234,69 +234,34 @@ document.addEventListener('DOMContentLoaded', () => {
             formPresentear.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                // Obter dados do formulário
-                const presenteId = document.getElementById('modalPresenteId').value;
-                const nomePagador = document.getElementById('nome_pagador').value.trim();
-                const emailPagador = document.getElementById('email_pagador').value.trim();
-                const telefonePagador = document.getElementById('telefone_pagador').value.trim();
-                const mensagemPagador = document.getElementById('mensagem_pagador').value.trim();
-
-                // Validações básicas no cliente
-                if (!nomePagador) {
-                    alert('Por favor, insira seu nome');
-                    return;
-                }
-
-                if (!emailPagador || !emailPagador.includes('@')) {
-                    alert('Por favor, insira um email válido');
-                    return;
-                }
-
-                if (!telefonePagador) {
-                    alert('Por favor, insira seu telefone');
-                    return;
-                }
-
-                // Desabilitar botão de submit enquanto processa
-                const btnSubmit = formPresentear.querySelector('button[type="submit"]');
-                const textoBotaoOriginal = btnSubmit.textContent;
-                btnSubmit.disabled = true;
-                btnSubmit.textContent = 'Processando...';
+                const dados = {
+                    presente_id: document.getElementById('modalPresenteId').value,
+                    nome_pagador: document.getElementById('nome_pagador').value,
+                    email_pagador: document.getElementById('email_pagador').value,
+                    telefone_pagador: document.getElementById('telefone_pagador').value,
+                    mensagem_pagador: document.getElementById('mensagem_pagador').value
+                };
 
                 try {
-                    // Enviar dados para criar pagamento
-                    const response = await fetch(`/criar_pagamento/${presenteId}`, {
+                    const response = await fetch("/api/presentear", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({
-                            nome_pagador: nomePagador,
-                            email_pagador: emailPagador,
-                            telefone_pagador: telefonePagador,
-                            mensagem_pagador: mensagemPagador
-                        })
+                        body: JSON.stringify(dados)
                     });
 
                     const data = await response.json();
 
-                    if (data.sucesso && data.init_point) {
-                        // Redirecionar para Mercado Pago
-                        console.log('Redirecionando para Mercado Pago:', data.init_point);
-                        window.location.href = data.init_point;
+                    if (data.sucesso && data.checkout_url) {
+                        window.location.href = data.checkout_url;
                     } else {
-                        // Erro retornado pelo servidor
-                        const mensagemErro = data.erro || 'Erro ao iniciar pagamento';
-                        alert(`Erro: ${mensagemErro}`);
-                        btnSubmit.disabled = false;
-                        btnSubmit.textContent = textoBotaoOriginal;
+                        alert(data.erro || "Erro ao iniciar o pagamento.");
                     }
 
                 } catch (error) {
-                    console.error('Erro ao criar pagamento:', error);
-                    alert('Erro de conexão. Tente novamente.');
-                    btnSubmit.disabled = false;
-                    btnSubmit.textContent = textoBotaoOriginal;
+                    console.error("Erro ao iniciar pagamento:", error);
+                    alert("Erro de conexão ao iniciar o pagamento.");
                 }
             });
         }
