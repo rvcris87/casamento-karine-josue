@@ -32,7 +32,7 @@ MERCADO_PAGO_PUBLIC_KEY = os.getenv(
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
 
 # Inicializar SDK do Mercado Pago
-sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
+sdk = mercadopago.SDK(os.getenv("MERCADO_PAGO_ACCESS_TOKEN"))
 
 # Criar blueprint
 pagamentos_bp = Blueprint("pagamentos", __name__)
@@ -367,8 +367,8 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
 # ROTAS FLASK
 # ============================================================================
 
-@pagamentos_bp.route("/criar_pagamento/<int:presente_id>", methods=["POST"])
-def criar_pagamento(presente_id):
+@pagamentos_bp.route("/api/presentear", methods=["POST"])
+def criar_pagamento():
     """
     Cria um link de pagamento no Mercado Pago para um presente.
     
@@ -392,7 +392,7 @@ def criar_pagamento(presente_id):
     """
     
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         
         if not data:
             return jsonify({
@@ -400,10 +400,17 @@ def criar_pagamento(presente_id):
                 "erro": "Dados JSON inválidos"
             }), 400
         
+        presente_id = data.get("presente_id")
         nome_pagador = data.get("nome_pagador", "").strip()
         email_pagador = data.get("email_pagador", "").strip()
         telefone_pagador = data.get("telefone_pagador", "").strip()
         mensagem_pagador = data.get("mensagem_pagador", "").strip()
+
+        if not presente_id:
+            return jsonify({
+                "sucesso": False,
+                "erro": "Presente é obrigatório"
+            }), 400
         
         # Validações
         if not nome_pagador:
@@ -426,7 +433,7 @@ def criar_pagamento(presente_id):
         
         # Criar pagamento no Mercado Pago
         resultado = criar_pagamento_mercado_pago(
-            presente_id,
+            int(presente_id),
             nome_pagador,
             email_pagador,
             telefone_pagador,
@@ -439,13 +446,16 @@ def criar_pagamento(presente_id):
         
         logger.info(f"Pagamento criado com sucesso: Presente {presente_id}, Email {email_pagador}")
         
-        return jsonify(resultado), 200
+        return jsonify({
+            "sucesso": True,
+            "checkout_url": resultado["init_point"]
+        }), 200
         
     except Exception as e:
+        print(f"Erro ao criar pagamento: {e}")
         logger.error(f"Erro ao criar pagamento: {e}", exc_info=True)
         return jsonify({
-            "sucesso": False,
-            "erro": "Erro interno ao processar pagamento"
+            "erro": str(e)
         }), 500
 
 
@@ -625,4 +635,3 @@ def status_pagamento_endpoint(presente_id):
             cur.close()
         if conn:
             conn.close()
-
