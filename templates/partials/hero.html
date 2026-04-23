@@ -4,25 +4,25 @@
 
     <!-- Container central -->
     <div class="hero-inner">
-        <!-- Títulos -->
+        <!-- Titulos -->
         <h1 class="hero-title">
             <span class="nome">{{ evento.nome_noiva if (evento and evento.nome_noiva) else 'Karine' }}</span>
             <span class="and">&</span>
-            <span class="nome">{{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josué' }}</span>
+            <span class="nome">{{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josu&eacute;' }}</span>
         </h1>
 
         <!-- Data e hora -->
         <p class="hero-date">
-            {{ evento.data_casamento if (evento and evento.data_casamento) else '10 de outubro de 2026' }} • 16:00h
+            {{ evento.data_casamento_formatada if (evento and evento.data_casamento_formatada) else '10-10-2026' }} • 16:00h
         </p>
 
         <!-- Mensagem -->
         <p class="hero-message">
-            Com alegria no coração, convidamos você para celebrar conosco o início do nosso para sempre 💙
+            Com alegria no cora&ccedil;&atilde;o, convidamos voc&ecirc; para celebrar conosco o in&iacute;cio do nosso para sempre 💙
         </p>
 
         <!-- CTA Button -->
-        <a href="#rsvp" class="hero-button">Confirmar Presença</a>
+        <a href="#rsvp" class="hero-button">Confirmar Presen&ccedil;a</a>
 
         <!-- Countdown -->
         <div class="hero-countdown">

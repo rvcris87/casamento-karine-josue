@@ -1494,9 +1494,21 @@ textarea {
         line-height: 1.8;
     }
 
+    .carrossel-lateral {
+        background: linear-gradient(180deg, #f7f9fc 0%, #eef4fb 100%);
+    }
+
+    .carrossel-slides {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .slide,
     .slide.ativo {
-        height: 340px;
+        height: min(78vw, 480px);
+        object-fit: contain;
+        object-position: center center;
     }
 }
 

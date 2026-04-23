@@ -1,7 +1,7 @@
 <footer class="footer">
     <div class="footer-content">
-        <p class="footer-names">{{ evento.nome_noiva if (evento and evento.nome_noiva) else 'Karine' }} & {{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josué' }}</p>
-        <p>{{ evento.data_casamento if (evento and evento.data_casamento) else '10 de outubro de 2026' }}</p>
-        <p>Com amor, esperamos você nesse dia tão especial.</p>
+        <p class="footer-names">{{ evento.nome_noiva if (evento and evento.nome_noiva) else 'Karine' }} & {{ evento.nome_noivo if (evento and evento.nome_noivo) else 'Josu&eacute;' }}</p>
+        <p>{{ evento.data_casamento_formatada if (evento and evento.data_casamento_formatada) else '10-10-2026' }}</p>
+        <p>Com amor, esperamos voc&ecirc; nesse dia t&atilde;o especial.</p>
     </div>
 </footer>
