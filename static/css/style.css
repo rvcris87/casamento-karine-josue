@@ -1077,6 +1077,24 @@ textarea {
     margin-bottom: 8px;
 }
 
+.footer-credito {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.footer-credito a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease, border-color 0.3s ease;
+}
+
+.footer-credito a:hover {
+    opacity: 1;
+    border-bottom-color: rgba(0, 0, 0, 0.5);
+}
+
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
