@@ -20,11 +20,61 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
+MERCADO_PAGO_SELLER_EMAIL = os.getenv("MERCADO_PAGO_SELLER_EMAIL", "").strip().lower()
 
-sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
 pagamentos_bp = Blueprint("pagamentos", __name__)
+
+
+def get_mercado_pago_access_token():
+    """Le o token atual do ambiente sem usar credenciais hardcoded."""
+    return os.getenv("MERCADO_PAGO_ACCESS_TOKEN", "").strip()
+
+
+def get_mercado_pago_token_mode(token):
+    """Identifica o modo do token sem registrar o valor completo."""
+    if not token:
+        return "missing"
+    if token.startswith("TEST"):
+        return "TEST"
+    if token.startswith("APP_USR"):
+        return "APP_USR"
+    return "unknown"
+
+
+def log_mercado_pago_token_status(contexto):
+    token = get_mercado_pago_access_token()
+    token_mode = get_mercado_pago_token_mode(token)
+    logger.info(
+        "Mercado Pago token status (%s): modo=%s, tamanho=%s",
+        contexto,
+        token_mode,
+        len(token),
+    )
+    return token, token_mode
+
+
+def get_mercado_pago_sdk(contexto):
+    token, token_mode = log_mercado_pago_token_status(contexto)
+
+    if not token:
+        raise RuntimeError("MERCADO_PAGO_ACCESS_TOKEN nao configurado no ambiente do backend.")
+
+    if token_mode == "TEST":
+        raise RuntimeError(
+            "Credenciais do Mercado Pago em modo teste. Configure MERCADO_PAGO_ACCESS_TOKEN "
+            "com um access token de producao iniciado por APP_USR."
+        )
+
+    if token_mode != "APP_USR":
+        raise RuntimeError(
+            "MERCADO_PAGO_ACCESS_TOKEN nao parece ser uma credencial de producao APP_USR."
+        )
+
+    return mercadopago.SDK(token)
+
+
+log_mercado_pago_token_status("import")
 
 
 def get_pagamentos_table_config(cur):
@@ -207,7 +257,15 @@ def criar_pagamento_mercado_pago(
             "erro": "Este presente esta indisponivel no momento",
         }
 
+    if MERCADO_PAGO_SELLER_EMAIL and email_pagador.lower() == MERCADO_PAGO_SELLER_EMAIL:
+        logger.warning("Tentativa de pagamento com o mesmo email configurado para o vendedor")
+        return {
+            "sucesso": False,
+            "erro": "Use uma conta do Mercado Pago diferente da conta do vendedor para concluir o pagamento.",
+        }
+
     try:
+        mp_sdk = get_mercado_pago_sdk("criar_preferencia")
         valor = float(presente["valor_sugerido"])
         preference = {
             "items": [
@@ -237,7 +295,7 @@ def criar_pagamento_mercado_pago(
             },
         }
 
-        response = sdk.preference().create(preference)
+        response = mp_sdk.preference().create(preference)
         if response["status"] != 201:
             logger.error("Erro ao criar preferencia MP: %s", response)
             return {
@@ -273,6 +331,13 @@ def criar_pagamento_mercado_pago(
             "init_point": init_point,
             "preferencia_id": preferencia_id,
             "pagamento_id": pagamento_id,
+        }
+    except RuntimeError as e:
+        logger.error("Configuracao Mercado Pago invalida: %s", e)
+        return {
+            "sucesso": False,
+            "erro": str(e),
+            "tipo_erro": "configuracao_mp",
         }
     except Exception as e:
         logger.error("Erro ao criar preferencia Mercado Pago: %s", e, exc_info=True)
@@ -424,6 +489,9 @@ def criar_pagamento():
             if resultado.get("tipo_erro") == "salvar_pagamento":
                 return jsonify({"erro": resultado.get("erro", "Erro ao salvar pagamento")}), 500
 
+            if resultado.get("tipo_erro") == "configuracao_mp":
+                return jsonify(resultado), 500
+
             status_code = 404 if "nao encontrado" in resultado.get("erro", "").lower() else 400
             return jsonify(resultado), status_code
 
@@ -455,7 +523,8 @@ def webhook_mercado_pago():
             logger.warning("Notificacao ignorada: tipo %s", tipo_notificacao)
             return jsonify({"recebido": True}), 200
 
-        payment_response = sdk.payment().get(mercado_pago_id)
+        mp_sdk = get_mercado_pago_sdk("webhook_consulta_pagamento")
+        payment_response = mp_sdk.payment().get(mercado_pago_id)
         if payment_response["status"] != 200:
             logger.error("Erro ao consultar pagamento %s: %s", mercado_pago_id, payment_response)
             registrar_webhook_log(

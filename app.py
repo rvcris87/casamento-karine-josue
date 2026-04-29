@@ -2,13 +2,6 @@ import os
 import logging
 from flask import Flask
 from dotenv import load_dotenv
-from db import formatar_valor_brl
-
-from routes.main import main_bp
-from routes.fotos import fotos_bp
-from routes.admin import admin_bp
-from routes.rsvp import rsvp_bp
-from routes.pagamentos import pagamentos_bp
 
 load_dotenv()
 
@@ -19,11 +12,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+from db import formatar_valor_brl
+
+from routes.main import main_bp
+from routes.fotos import fotos_bp
+from routes.admin import admin_bp
+from routes.rsvp import rsvp_bp
+from routes.pagamentos import pagamentos_bp
+
 # Validacao de variaveis de ambiente criticas
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
 MP_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
 MP_PUBLIC_KEY = os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+
+
+def get_mp_token_mode(token):
+    """Retorna somente o modo seguro do token, sem expor o segredo."""
+    if not token:
+        return "missing"
+
+    token = token.strip()
+    if token.startswith("TEST"):
+        return "TEST"
+    if token.startswith("APP_USR"):
+        return "APP_USR"
+    return "unknown"
 
 # Validar DATABASE_URL (critico - aplicacao nao funciona sem)
 if not DATABASE_URL:
@@ -33,8 +47,16 @@ if not DATABASE_URL:
 if not MP_ACCESS_TOKEN:
     raise RuntimeError("MERCADO_PAGO_ACCESS_TOKEN nao configurado no .env - pagamentos desativados")
 
-if not MP_PUBLIC_KEY:
-    logger.warning("MERCADO_PAGO_PUBLIC_KEY nao configurado - frontend pode falhar ao exibir checkout")
+mp_token_mode = get_mp_token_mode(MP_ACCESS_TOKEN)
+logger.info("Mercado Pago access token carregado em modo: %s", mp_token_mode)
+
+if mp_token_mode == "TEST":
+    logger.error("MERCADO_PAGO_ACCESS_TOKEN esta em modo TEST. Configure um token APP_USR de producao.")
+elif mp_token_mode != "APP_USR":
+    logger.warning("MERCADO_PAGO_ACCESS_TOKEN nao tem prefixo esperado de producao APP_USR.")
+
+if MP_PUBLIC_KEY:
+    logger.info("Mercado Pago public key configurada em modo: %s", get_mp_token_mode(MP_PUBLIC_KEY))
 
 # Validar SECRET_KEY (critico - sessoes nao funcionam sem)
 if not SECRET_KEY:
