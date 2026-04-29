@@ -46,10 +46,9 @@ def log_mercado_pago_token_status(contexto):
     token = get_mercado_pago_access_token()
     token_mode = get_mercado_pago_token_mode(token)
     logger.info(
-        "Mercado Pago token status (%s): modo=%s, tamanho=%s",
+        "Mercado Pago token status (%s): prefixo=%s",
         contexto,
         token_mode,
-        len(token),
     )
     return token, token_mode
 
@@ -290,9 +289,6 @@ def criar_pagamento_mercado_pago(
             "notification_url": f"{BASE_URL}/webhook/mercado_pago",
             "external_reference": f"presente_{presente_id}_{email_pagador}",
             "auto_return": "all",
-            "payment_methods": {
-                "installments": 1,
-            },
         }
 
         response = mp_sdk.preference().create(preference)

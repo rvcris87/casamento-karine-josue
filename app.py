@@ -48,7 +48,7 @@ if not MP_ACCESS_TOKEN:
     raise RuntimeError("MERCADO_PAGO_ACCESS_TOKEN nao configurado no .env - pagamentos desativados")
 
 mp_token_mode = get_mp_token_mode(MP_ACCESS_TOKEN)
-logger.info("Mercado Pago access token carregado em modo: %s", mp_token_mode)
+logger.info("Mercado Pago access token carregado com prefixo: %s", mp_token_mode)
 
 if mp_token_mode == "TEST":
     logger.error("MERCADO_PAGO_ACCESS_TOKEN esta em modo TEST. Configure um token APP_USR de producao.")
@@ -56,7 +56,7 @@ elif mp_token_mode != "APP_USR":
     logger.warning("MERCADO_PAGO_ACCESS_TOKEN nao tem prefixo esperado de producao APP_USR.")
 
 if MP_PUBLIC_KEY:
-    logger.info("Mercado Pago public key configurada em modo: %s", get_mp_token_mode(MP_PUBLIC_KEY))
+    logger.info("Mercado Pago public key configurada com prefixo: %s", get_mp_token_mode(MP_PUBLIC_KEY))
 
 # Validar SECRET_KEY (critico - sessoes nao funcionam sem)
 if not SECRET_KEY:
