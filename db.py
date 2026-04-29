@@ -108,7 +108,9 @@ def get_presentes():
         cur.execute("""
             SELECT id, nome, slug, imagem, valor, status, destaque, ordem
             FROM presentes
-            ORDER BY lower(nome) ASC
+            ORDER BY
+                CASE WHEN status = 'indisponivel' THEN 1 ELSE 0 END,
+                lower(nome) ASC
         """)
 
         dados = cur.fetchall()
