@@ -1191,6 +1191,16 @@ textarea {
     color: #2f3742;
 }
 
+.badge-disponivel {
+    background: rgba(230, 244, 234, 0.95);
+    color: #237a3b;
+}
+
+.badge-indisponivel {
+    background: rgba(253, 231, 231, 0.95);
+    color: #b33939;
+}
+
 .admin-card-content {
     padding: 20px;
 }
@@ -1227,6 +1237,24 @@ textarea {
 
 .admin-actions form {
     margin: 0;
+}
+
+.admin-actions-single {
+    grid-template-columns: 1fr;
+}
+
+.admin-presente-card img {
+    object-fit: contain;
+    background: #fff;
+}
+
+.admin-presente-indisponivel {
+    border: 1px solid #f1c6c6;
+}
+
+.admin-presente-indisponivel img {
+    filter: grayscale(25%);
+    opacity: 0.72;
 }
 
 .form-excluir {

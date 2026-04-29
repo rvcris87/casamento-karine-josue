@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Admin | Presentes{% endblock %}
+
+{% block content %}
+<section class="admin-page">
+    <div class="admin-header">
+        <p class="eyebrow">Painel administrativo</p>
+        <h1>Presentes</h1>
+        <p>Controle quais presentes aparecem na lista publica do casamento.</p>
+
+        <div class="admin-top-actions">
+            <a href="{{ url_for('admin.admin_fotos') }}" class="btn-outline">Ver fotos</a>
+            <a href="{{ url_for('admin.admin_rsvp') }}" class="btn-outline">Ver RSVPs</a>
+
+            <form method="POST" action="{{ url_for('admin.logout_admin') }}" class="logout-form">
+                <button type="submit" class="btn-outline">Sair do painel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        {% for presente in presentes %}
+        <article class="admin-card admin-presente-card {% if presente.status == 'indisponivel' %}admin-presente-indisponivel{% endif %}">
+            <div class="admin-card-image-wrapper">
+                <img src="{{ url_for('static', filename='img/presentes/' ~ presente.imagem) }}" alt="{{ presente.nome }}">
+                <div class="admin-card-badges">
+                    {% if presente.status == 'indisponivel' %}
+                    <span class="badge badge-indisponivel">Indispon&iacute;vel</span>
+                    {% else %}
+                    <span class="badge badge-disponivel">Dispon&iacute;vel</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="admin-card-content">
+                <div class="admin-card-top">
+                    <h3>{{ presente.nome }}</h3>
+                </div>
+
+                <p class="admin-meta">{{ presente.valor | brl }}</p>
+
+                <div class="admin-actions admin-actions-single">
+                    <form method="POST" action="{{ url_for('admin.alternar_presente_status', presente_id=presente.id) }}">
+                        {% if presente.status == 'indisponivel' %}
+                        <button type="submit" class="btn-outline">Marcar como dispon&iacute;vel</button>
+                        {% else %}
+                        <button type="submit" class="btn-danger">Marcar como indispon&iacute;vel</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

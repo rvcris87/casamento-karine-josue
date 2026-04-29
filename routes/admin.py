@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 from db import (
     get_todas_fotos,
+    get_todos_presentes_admin,
+    alternar_status_presente,
     alternar_destaque_foto,
     excluir_foto,
     get_todos_rsvp
@@ -56,6 +58,24 @@ def logout_admin():
 def admin_fotos():
     fotos = get_todas_fotos()
     return render_template("admin_fotos.html", fotos=fotos)
+
+
+@admin_bp.route("/presentes")
+@login_required_admin
+def admin_presentes():
+    presentes = get_todos_presentes_admin()
+    return render_template("admin_presentes.html", presentes=presentes)
+
+
+@admin_bp.route("/presentes/<int:presente_id>/status", methods=["POST"])
+@login_required_admin
+def alternar_presente_status(presente_id):
+    novo_status = alternar_status_presente(presente_id)
+    if novo_status:
+        flash(f"Presente marcado como {novo_status}.", "sucesso")
+    else:
+        flash("Presente nao encontrado.", "erro")
+    return redirect(url_for("admin.admin_presentes"))
 
 
 

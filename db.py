@@ -80,7 +80,52 @@ def sql_to_dict(cursor, query, params=None):
         raise Exception(f"Erro ao executar query: {str(e)}")
 
 
+def _montar_presentes(dados):
+    presentes = []
+    for p in dados:
+        presentes.append({
+            "id": p[0],
+            "nome": p[1],
+            "slug": p[2],
+            "imagem": p[3],
+            "valor": float(p[4]) if p[4] is not None else 0,
+            "status": p[5],
+            "destaque": p[6],
+            "ordem": p[7],
+        })
+    return presentes
+
+
 def get_presentes():
+    """Busca somente presentes disponiveis para a lista publica."""
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT id, nome, slug, imagem, valor, status, destaque, ordem
+            FROM presentes
+            WHERE status = 'disponivel'
+            ORDER BY
+                COALESCE(ordem, 9999) ASC,
+                lower(nome) ASC
+        """)
+
+        dados = cur.fetchall()
+        return _montar_presentes(dados)
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def get_todos_presentes_admin():
+    """Busca todos os presentes para o painel admin, incluindo indisponiveis."""
     conn = None
     cur = None
 
@@ -93,26 +138,50 @@ def get_presentes():
             FROM presentes
             ORDER BY
                 CASE WHEN status = 'disponivel' THEN 0 ELSE 1 END,
+                COALESCE(ordem, 9999) ASC,
                 lower(nome) ASC
         """)
 
         dados = cur.fetchall()
+        return _montar_presentes(dados)
 
-        presentes = []
-        for p in dados:
-            presentes.append({
-                "id": p[0],
-                "nome": p[1],
-                "slug": p[2],
-                "imagem": p[3],
-                "valor": float(p[4]) if p[4] is not None else 0,
-                "status": p[5],
-                "destaque": p[6],
-                "ordem": p[7],
-            })
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
-        return presentes
 
+def alternar_status_presente(presente_id):
+    """Alterna o status do presente entre disponivel e indisponivel."""
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("SELECT status FROM presentes WHERE id = %s", (presente_id,))
+        resultado = cur.fetchone()
+        if not resultado:
+            return None
+
+        status_atual = resultado[0]
+        novo_status = "disponivel" if status_atual == "indisponivel" else "indisponivel"
+
+        cur.execute("""
+            UPDATE presentes
+            SET status = %s
+            WHERE id = %s
+        """, (novo_status, presente_id))
+
+        conn.commit()
+        return novo_status
+
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
     finally:
         if cur:
             cur.close()
