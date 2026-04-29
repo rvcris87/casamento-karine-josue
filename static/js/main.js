@@ -260,12 +260,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.sucesso && data.checkout_url) {
                         window.location.href = data.checkout_url;
                     } else {
-                        alert(data.erro || "Erro ao iniciar o pagamento.");
+                        alert("Não foi possível iniciar o pagamento. Tente novamente.");
                     }
 
                 } catch (error) {
                     console.error("Erro ao iniciar pagamento:", error);
-                    alert("Erro de conexão ao iniciar o pagamento.");
+                    alert("Não foi possível iniciar o pagamento. Tente novamente.");
                 }
             });
         }

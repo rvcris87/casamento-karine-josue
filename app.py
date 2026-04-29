@@ -23,40 +23,21 @@ from routes.pagamentos import pagamentos_bp
 # Validacao de variaveis de ambiente criticas
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
-MP_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
-MP_PUBLIC_KEY = os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+PAGBANK_TOKEN = os.getenv("PAGBANK_TOKEN")
+PAGBANK_ENV = os.getenv("PAGBANK_ENV", "production")
+PAGBANK_API_URL = os.getenv("PAGBANK_API_URL", "https://api.pagseguro.com")
 
-
-def get_mp_token_mode(token):
-    """Retorna somente o modo seguro do token, sem expor o segredo."""
-    if not token:
-        return "missing"
-
-    token = token.strip()
-    if token.startswith("TEST"):
-        return "TEST"
-    if token.startswith("APP_USR"):
-        return "APP_USR"
-    return "unknown"
 
 # Validar DATABASE_URL (critico - aplicacao nao funciona sem)
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL nao configurada no .env - aplicacao nao pode iniciar")
 
-# Validar Mercado Pago (critico - pagamentos nao funcionam sem)
-if not MP_ACCESS_TOKEN:
-    raise RuntimeError("MERCADO_PAGO_ACCESS_TOKEN nao configurado no .env - pagamentos desativados")
+# Validar PagBank (critico - pagamentos nao funcionam sem)
+logger.info("PagBank token configurado: %s", "sim" if PAGBANK_TOKEN else "nao")
+logger.info("PagBank ambiente: %s, API URL: %s", PAGBANK_ENV, PAGBANK_API_URL)
 
-mp_token_mode = get_mp_token_mode(MP_ACCESS_TOKEN)
-logger.info("Mercado Pago access token carregado com prefixo: %s", mp_token_mode)
-
-if mp_token_mode == "TEST":
-    logger.error("MERCADO_PAGO_ACCESS_TOKEN esta em modo TEST. Configure um token APP_USR de producao.")
-elif mp_token_mode != "APP_USR":
-    logger.warning("MERCADO_PAGO_ACCESS_TOKEN nao tem prefixo esperado de producao APP_USR.")
-
-if MP_PUBLIC_KEY:
-    logger.info("Mercado Pago public key configurada com prefixo: %s", get_mp_token_mode(MP_PUBLIC_KEY))
+if not PAGBANK_TOKEN:
+    raise RuntimeError("PAGBANK_TOKEN nao configurado no .env - pagamentos desativados")
 
 # Validar SECRET_KEY (critico - sessoes nao funcionam sem)
 if not SECRET_KEY:

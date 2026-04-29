@@ -1,5 +1,5 @@
 """
-Integracao com Mercado Pago para pagamento de presentes.
+Integracao com PagSeguro/PagBank para pagamento de presentes.
 Suporta PIX, cartao de credito e debito.
 """
 
@@ -8,8 +8,8 @@ import logging
 import os
 import time
 
-import mercadopago
 import psycopg2
+import requests
 from dotenv import load_dotenv
 from flask import Blueprint, jsonify, render_template, request
 from psycopg2.extras import RealDictCursor
@@ -20,60 +20,37 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
-MERCADO_PAGO_SELLER_EMAIL = os.getenv("MERCADO_PAGO_SELLER_EMAIL", "").strip().lower()
+PAGBANK_API_URL = os.getenv("PAGBANK_API_URL", "https://api.pagseguro.com").rstrip("/")
+PAGBANK_ENV = os.getenv("PAGBANK_ENV", "production").strip().lower()
+PAGBANK_SELLER_EMAIL = os.getenv("PAGBANK_SELLER_EMAIL", "").strip().lower()
 
 pagamentos_bp = Blueprint("pagamentos", __name__)
 
 
-def get_mercado_pago_access_token():
+def get_pagbank_token():
     """Le o token atual do ambiente sem usar credenciais hardcoded."""
-    return os.getenv("MERCADO_PAGO_ACCESS_TOKEN", "").strip()
+    return os.getenv("PAGBANK_TOKEN", "").strip()
 
 
-def get_mercado_pago_token_mode(token):
-    """Identifica o modo do token sem registrar o valor completo."""
+def log_pagbank_token_status(contexto):
+    token = get_pagbank_token()
+    logger.info("PagBank token status (%s): configurado=%s", contexto, "sim" if token else "nao")
+    return token
+
+
+def get_pagbank_headers(contexto):
+    token = log_pagbank_token_status(contexto)
     if not token:
-        return "missing"
-    if token.startswith("TEST"):
-        return "TEST"
-    if token.startswith("APP_USR"):
-        return "APP_USR"
-    return "unknown"
+        raise RuntimeError("PAGBANK_TOKEN nao configurado no ambiente do backend.")
+
+    return {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
 
 
-def log_mercado_pago_token_status(contexto):
-    token = get_mercado_pago_access_token()
-    token_mode = get_mercado_pago_token_mode(token)
-    logger.info(
-        "Mercado Pago token status (%s): prefixo=%s",
-        contexto,
-        token_mode,
-    )
-    return token, token_mode
-
-
-def get_mercado_pago_sdk(contexto):
-    token, token_mode = log_mercado_pago_token_status(contexto)
-
-    if not token:
-        raise RuntimeError("MERCADO_PAGO_ACCESS_TOKEN nao configurado no ambiente do backend.")
-
-    if token_mode == "TEST":
-        raise RuntimeError(
-            "Credenciais do Mercado Pago em modo teste. Configure MERCADO_PAGO_ACCESS_TOKEN "
-            "com um access token de producao iniciado por APP_USR."
-        )
-
-    if token_mode != "APP_USR":
-        raise RuntimeError(
-            "MERCADO_PAGO_ACCESS_TOKEN nao parece ser uma credencial de producao APP_USR."
-        )
-
-    return mercadopago.SDK(token)
-
-
-log_mercado_pago_token_status("import")
+log_pagbank_token_status("import")
 
 
 def get_pagamentos_table_config(cur):
@@ -103,9 +80,38 @@ def get_pagamentos_table_config(cur):
     )
 
 
-def gerar_mercado_pago_id_temporario():
+def gerar_pagamento_id_temporario():
     """Gera um ID temporario unico antes do webhook devolver o ID real."""
     return -int(time.time_ns())
+
+
+def valor_em_centavos(valor):
+    return int(round(float(valor) * 100))
+
+
+def normalizar_telefone(telefone):
+    return "".join(ch for ch in (telefone or "") if ch.isdigit())
+
+
+def montar_reference_id(presente_id, email_pagador):
+    referencia = f"presente_{presente_id}_{time.time_ns()}"
+    return referencia[:64]
+
+
+def extrair_checkout_url_pagbank(checkout):
+    for link in checkout.get("links", []):
+        if link.get("rel") == "PAY" and link.get("href"):
+            return link["href"]
+
+    return None
+
+
+def get_public_base_url():
+    base_url = os.getenv("BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        return base_url
+
+    return request.host_url.rstrip("/")
 
 
 def get_presente_by_id(presente_id):
@@ -199,7 +205,7 @@ def salvar_pagamento_no_banco(
                 """,
                 (
                     presente_id,
-                    gerar_mercado_pago_id_temporario(),
+                    gerar_pagamento_id_temporario(),
                     "pending",
                     valor,
                     nome_pagador,
@@ -226,14 +232,80 @@ def salvar_pagamento_no_banco(
             conn.close()
 
 
-def criar_pagamento_mercado_pago(
+def criar_checkout_pagbank(presente, comprador, valor):
+    reference_id = montar_reference_id(presente["id"], comprador["email"])
+    telefone = normalizar_telefone(comprador.get("telefone"))
+    public_base_url = get_public_base_url()
+    webhook_url = f"{public_base_url}/webhook/pagbank"
+    valor_centavos = valor_em_centavos(valor)
+
+    customer = {
+        "name": comprador["nome"],
+        "email": comprador["email"],
+    }
+    if len(telefone) >= 10:
+        customer["phones"] = [
+            {
+                "country": "55",
+                "area": telefone[:2],
+                "number": telefone[2:],
+                "type": "MOBILE",
+            }
+        ]
+
+    payload = {
+        "reference_id": reference_id,
+        "customer": customer,
+        "items": [
+            {
+                "reference_id": str(presente["id"]),
+                "name": presente["titulo"][:100],
+                "quantity": 1,
+                "unit_amount": valor_centavos,
+            }
+        ],
+        "redirect_url": f"{public_base_url}/pagamento/sucesso",
+        "return_url": f"{public_base_url}/pagamento/pendente",
+        "notification_urls": [webhook_url],
+        "payment_notification_urls": [webhook_url],
+    }
+
+    response = requests.post(
+        f"{PAGBANK_API_URL}/checkouts",
+        headers=get_pagbank_headers("criar_checkout"),
+        json=payload,
+        timeout=20,
+    )
+
+    if response.status_code not in (200, 201):
+        logger.error(
+            "Erro PagBank ao criar checkout: status=%s, resposta=%s",
+            response.status_code,
+            response.text[:500],
+        )
+        raise RuntimeError("Nao foi possivel iniciar o pagamento. Tente novamente.")
+
+    checkout = response.json()
+    checkout_url = extrair_checkout_url_pagbank(checkout)
+    if not checkout.get("id") or not checkout_url:
+        logger.error("Resposta PagBank sem checkout id ou link PAY: %s", checkout)
+        raise RuntimeError("Nao foi possivel iniciar o pagamento. Tente novamente.")
+
+    return {
+        "checkout_id": checkout["id"],
+        "checkout_url": checkout_url,
+        "reference_id": reference_id,
+    }
+
+
+def criar_pagamento_pagbank(
     presente_id,
     nome_pagador,
     email_pagador,
     telefone_pagador,
     mensagem_pagador,
 ):
-    """Cria uma preferencia de pagamento no Mercado Pago para um presente."""
+    """Cria um checkout PagBank para um presente."""
     if not presente_id or not nome_pagador or not email_pagador:
         logger.warning("Dados incompletos para criar pagamento")
         return {
@@ -256,52 +328,21 @@ def criar_pagamento_mercado_pago(
             "erro": "Este presente esta indisponivel no momento",
         }
 
-    if MERCADO_PAGO_SELLER_EMAIL and email_pagador.lower() == MERCADO_PAGO_SELLER_EMAIL:
+    if PAGBANK_SELLER_EMAIL and email_pagador.lower() == PAGBANK_SELLER_EMAIL:
         logger.warning("Tentativa de pagamento com o mesmo email configurado para o vendedor")
         return {
             "sucesso": False,
-            "erro": "Use uma conta do Mercado Pago diferente da conta do vendedor para concluir o pagamento.",
+            "erro": "Use uma conta PagBank diferente da conta do vendedor para concluir o pagamento.",
         }
 
     try:
-        mp_sdk = get_mercado_pago_sdk("criar_preferencia")
         valor = float(presente["valor_sugerido"])
-        preference = {
-            "items": [
-                {
-                    "title": presente["titulo"],
-                    "description": presente["descricao"][:100] if presente["descricao"] else "",
-                    "quantity": 1,
-                    "currency_id": "BRL",
-                    "unit_price": valor,
-                }
-            ],
-            "payer": {
-                "name": nome_pagador,
-                "email": email_pagador,
-                "phone": {"number": telefone_pagador},
-            },
-            "back_urls": {
-                "success": f"{BASE_URL}/pagamento/sucesso",
-                "failure": f"{BASE_URL}/pagamento/falha",
-                "pending": f"{BASE_URL}/pagamento/pendente",
-            },
-            "notification_url": f"{BASE_URL}/webhook/mercado_pago",
-            "external_reference": f"presente_{presente_id}_{email_pagador}",
-            "auto_return": "all",
+        comprador = {
+            "nome": nome_pagador,
+            "email": email_pagador,
+            "telefone": telefone_pagador,
         }
-
-        response = mp_sdk.preference().create(preference)
-        if response["status"] != 201:
-            logger.error("Erro ao criar preferencia MP: %s", response)
-            return {
-                "sucesso": False,
-                "erro": "Erro ao processar pagamento",
-            }
-
-        preference_data = response["response"]
-        preferencia_id = preference_data["id"]
-        init_point = preference_data["init_point"]
+        checkout = criar_checkout_pagbank(presente, comprador, valor)
 
         try:
             pagamento_id = salvar_pagamento_no_banco(
@@ -311,8 +352,8 @@ def criar_pagamento_mercado_pago(
                 telefone_pagador,
                 mensagem_pagador,
                 valor,
-                preferencia_id,
-                init_point,
+                checkout["reference_id"],
+                checkout["checkout_url"],
             )
         except Exception as e:
             return {
@@ -321,25 +362,30 @@ def criar_pagamento_mercado_pago(
                 "tipo_erro": "salvar_pagamento",
             }
 
-        logger.info("Pagamento criado: ID %s, Preferencia MP %s", pagamento_id, preferencia_id)
+        logger.info(
+            "Pagamento PagBank criado: ID %s, Checkout %s",
+            pagamento_id,
+            checkout["checkout_id"],
+        )
         return {
             "sucesso": True,
-            "init_point": init_point,
-            "preferencia_id": preferencia_id,
+            "checkout_url": checkout["checkout_url"],
+            "checkout_id": checkout["checkout_id"],
+            "reference_id": checkout["reference_id"],
             "pagamento_id": pagamento_id,
         }
     except RuntimeError as e:
-        logger.error("Configuracao Mercado Pago invalida: %s", e)
+        logger.error("Erro PagBank: %s", e)
         return {
             "sucesso": False,
             "erro": str(e),
-            "tipo_erro": "configuracao_mp",
+            "tipo_erro": "pagbank",
         }
     except Exception as e:
-        logger.error("Erro ao criar preferencia Mercado Pago: %s", e, exc_info=True)
+        logger.error("Erro ao criar checkout PagBank: %s", e, exc_info=True)
         return {
             "sucesso": False,
-            "erro": "Erro ao processar pagamento",
+            "erro": "Nao foi possivel iniciar o pagamento. Tente novamente.",
         }
 
 
@@ -378,20 +424,38 @@ def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, met
     """Atualiza o status de um pagamento no banco de dados."""
     conn = None
     cur = None
+    mercado_pago_id_num = None
+    if mercado_pago_id is not None:
+        try:
+            mercado_pago_id_num = int(mercado_pago_id)
+        except (TypeError, ValueError):
+            mercado_pago_id_num = None
 
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            """
-            UPDATE pagamentos_mercado_pago
-            SET status = %s, mercado_pago_id = %s, metodo_pagamento = %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE preferencia_id = %s
-            RETURNING presente_id
-            """,
-            (novo_status, mercado_pago_id, metodo or "desconhecido", preferencia_id),
-        )
+        if mercado_pago_id_num is None:
+            cur.execute(
+                """
+                UPDATE pagamentos_mercado_pago
+                SET status = %s, metodo_pagamento = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE preferencia_id = %s
+                RETURNING presente_id
+                """,
+                (novo_status, metodo or "desconhecido", preferencia_id),
+            )
+        else:
+            cur.execute(
+                """
+                UPDATE pagamentos_mercado_pago
+                SET status = %s, mercado_pago_id = %s, metodo_pagamento = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE preferencia_id = %s
+                RETURNING presente_id
+                """,
+                (novo_status, mercado_pago_id_num, metodo or "desconhecido", preferencia_id),
+            )
         resultado = cur.fetchone()
         conn.commit()
 
@@ -416,6 +480,12 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
     """Registra uma notificacao de webhook para auditoria e debugging."""
     conn = None
     cur = None
+    mercado_pago_id_num = None
+    if mercado_pago_id is not None:
+        try:
+            mercado_pago_id_num = int(mercado_pago_id)
+        except (TypeError, ValueError):
+            mercado_pago_id_num = None
 
     try:
         conn = get_connection()
@@ -427,7 +497,7 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
             VALUES (%s, %s, %s, %s, %s)
             """,
             (
-                mercado_pago_id,
+                mercado_pago_id_num,
                 tipo_notificacao,
                 status,
                 json.dumps(dados_json),
@@ -435,7 +505,7 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
             ),
         )
         conn.commit()
-        logger.info("Webhook registrado: MP ID %s, Tipo %s", mercado_pago_id, tipo_notificacao)
+        logger.info("Webhook registrado: ID externo %s, Tipo %s", mercado_pago_id, tipo_notificacao)
     except psycopg2.Error as e:
         logger.error("Erro ao registrar webhook log: %s", e)
         if conn:
@@ -447,9 +517,51 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
             conn.close()
 
 
+def mapear_status_pagbank(status):
+    status_normalizado = (status or "").upper()
+    if status_normalizado in {"PAID", "AUTHORIZED", "APPROVED", "CAPTURED"}:
+        return "approved"
+    if status_normalizado in {"WAITING", "IN_ANALYSIS", "PENDING", "ACTIVE"}:
+        return "pending"
+    if status_normalizado in {"CANCELED", "CANCELLED", "DECLINED", "VOIDED", "EXPIRED"}:
+        return "cancelled"
+    if status_normalizado in {"DENIED", "REJECTED"}:
+        return "rejected"
+    return "pending"
+
+
+def extrair_dados_webhook_pagbank(data):
+    charges = data.get("charges") or []
+    charge = charges[0] if charges else {}
+    payment_method = charge.get("payment_method") or {}
+
+    checkout_id = (
+        data.get("reference_id")
+        or charge.get("reference_id")
+        or data.get("checkout_id")
+        or data.get("id")
+    )
+    status = (
+        charge.get("status")
+        or data.get("status")
+        or data.get("event")
+        or data.get("type")
+    )
+    pagamento_id = charge.get("id") or data.get("payment_id") or data.get("id")
+    metodo = payment_method.get("type") or data.get("payment_method") or "desconhecido"
+
+    return {
+        "checkout_id": checkout_id,
+        "pagamento_id": pagamento_id,
+        "status_original": status,
+        "status": mapear_status_pagbank(status),
+        "metodo": metodo,
+    }
+
+
 @pagamentos_bp.route("/api/presentear", methods=["POST"])
 def criar_pagamento():
-    """Cria um link de pagamento no Mercado Pago para um presente."""
+    """Cria um link de pagamento no PagBank para um presente."""
     try:
         data = request.get_json(silent=True)
         if not data:
@@ -473,7 +585,7 @@ def criar_pagamento():
         if not telefone_pagador:
             return jsonify({"sucesso": False, "erro": "Telefone e obrigatorio"}), 400
 
-        resultado = criar_pagamento_mercado_pago(
+        resultado = criar_pagamento_pagbank(
             int(presente_id),
             nome_pagador,
             email_pagador,
@@ -485,70 +597,59 @@ def criar_pagamento():
             if resultado.get("tipo_erro") == "salvar_pagamento":
                 return jsonify({"erro": resultado.get("erro", "Erro ao salvar pagamento")}), 500
 
-            if resultado.get("tipo_erro") == "configuracao_mp":
+            if resultado.get("tipo_erro") == "pagbank":
                 return jsonify(resultado), 500
 
             status_code = 404 if "nao encontrado" in resultado.get("erro", "").lower() else 400
             return jsonify(resultado), status_code
 
         logger.info("Pagamento criado com sucesso: Presente %s, Email %s", presente_id, email_pagador)
-        return jsonify({"sucesso": True, "checkout_url": resultado["init_point"]}), 200
+        return jsonify({"sucesso": True, "checkout_url": resultado["checkout_url"]}), 200
     except Exception as e:
         logger.error("Erro ao criar pagamento: %s", e, exc_info=True)
         return jsonify({"erro": str(e)}), 500
 
 
-@pagamentos_bp.route("/webhook/mercado_pago", methods=["POST"])
-def webhook_mercado_pago():
-    """Webhook para receber notificacoes de pagamento do Mercado Pago."""
+@pagamentos_bp.route("/webhook/pagbank", methods=["POST"])
+def webhook_pagbank():
+    """Webhook para receber notificacoes de checkout/pagamento do PagBank."""
     try:
-        data = request.form if request.form else request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            logger.warning("Webhook PagBank ignorado: payload invalido")
+            return jsonify({"recebido": False, "erro": "Payload invalido"}), 400
 
-        tipo_notificacao = data.get("type") or data.get("topic")
-        mercado_pago_id = data.get("id")
-        logger.info("Webhook recebido: Tipo %s, ID %s", tipo_notificacao, mercado_pago_id)
-
-        registrar_webhook_log(
-            mercado_pago_id,
-            tipo_notificacao,
-            "recebido",
-            data.to_dict() if hasattr(data, "to_dict") else dict(data),
-        )
-
-        if tipo_notificacao != "payment":
-            logger.warning("Notificacao ignorada: tipo %s", tipo_notificacao)
-            return jsonify({"recebido": True}), 200
-
-        mp_sdk = get_mercado_pago_sdk("webhook_consulta_pagamento")
-        payment_response = mp_sdk.payment().get(mercado_pago_id)
-        if payment_response["status"] != 200:
-            logger.error("Erro ao consultar pagamento %s: %s", mercado_pago_id, payment_response)
-            registrar_webhook_log(
-                mercado_pago_id,
-                tipo_notificacao,
-                "erro_consulta",
-                data.to_dict() if hasattr(data, "to_dict") else dict(data),
-                "Erro ao consultar pagamento no MP",
-            )
-            return jsonify({"recebido": True}), 200
-
-        payment = payment_response["response"]
-        status_pagamento = payment.get("status")
-        preferencia_id = payment.get("preference_id")
-        metodo_pagamento = payment.get("payment_method", {}).get("type", "desconhecido")
+        dados_pagbank = extrair_dados_webhook_pagbank(data)
+        tipo_notificacao = data.get("type") or data.get("event") or "pagbank"
+        checkout_id = dados_pagbank["checkout_id"]
+        pagamento_id = dados_pagbank["pagamento_id"]
+        status_pagamento = dados_pagbank["status"]
 
         logger.info(
-            "Pagamento %s: Status %s, Preferencia %s",
-            mercado_pago_id,
-            status_pagamento,
-            preferencia_id,
+            "Webhook PagBank recebido: Tipo %s, Checkout %s, Status %s",
+            tipo_notificacao,
+            checkout_id,
+            dados_pagbank["status_original"],
         )
 
+        registrar_webhook_log(pagamento_id, tipo_notificacao, "recebido", data)
+
+        if not checkout_id or not dados_pagbank["status_original"]:
+            registrar_webhook_log(
+                pagamento_id,
+                tipo_notificacao,
+                "erro_payload",
+                data,
+                "Webhook PagBank sem checkout_id ou status",
+            )
+            logger.warning("Webhook PagBank sem checkout_id ou status")
+            return jsonify({"recebido": False, "erro": "Evento invalido"}), 400
+
         resultado_update = atualizar_pagamento_status(
-            preferencia_id,
-            mercado_pago_id,
+            checkout_id,
+            pagamento_id,
             status_pagamento,
-            metodo_pagamento,
+            dados_pagbank["metodo"],
         )
         presente_id = resultado_update.get("presente_id")
 
@@ -560,26 +661,27 @@ def webhook_mercado_pago():
                     presente_id,
                 )
                 registrar_webhook_log(
-                    mercado_pago_id,
+                    pagamento_id,
                     tipo_notificacao,
                     "processado",
-                    data.to_dict() if hasattr(data, "to_dict") else dict(data),
+                    data,
                 )
             else:
                 logger.error("Erro ao atualizar presente %s para indisponivel", presente_id)
                 registrar_webhook_log(
-                    mercado_pago_id,
+                    pagamento_id,
                     tipo_notificacao,
                     "erro_update_presente",
-                    data.to_dict() if hasattr(data, "to_dict") else dict(data),
+                    data,
                     f"Erro ao atualizar presente {presente_id}",
                 )
-        elif status_pagamento in ["cancelled", "refunded"] and presente_id:
+        elif status_pagamento in ["cancelled", "rejected"] and presente_id:
             sucesso = atualizar_status_presente(presente_id, "disponivel")
             if sucesso:
                 logger.info(
-                    "Presente %s marcado como disponivel (pagamento cancelado)",
+                    "Presente %s marcado como disponivel (pagamento %s)",
                     presente_id,
+                    status_pagamento,
                 )
             else:
                 logger.error("Erro ao atualizar presente %s para disponivel", presente_id)
