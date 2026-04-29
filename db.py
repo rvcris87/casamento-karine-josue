@@ -97,7 +97,7 @@ def _montar_presentes(dados):
 
 
 def get_presentes():
-    """Busca somente presentes disponiveis para a lista publica."""
+    """Busca todos os presentes para a lista publica."""
     conn = None
     cur = None
 
@@ -108,10 +108,7 @@ def get_presentes():
         cur.execute("""
             SELECT id, nome, slug, imagem, valor, status, destaque, ordem
             FROM presentes
-            WHERE status = 'disponivel'
-            ORDER BY
-                COALESCE(ordem, 9999) ASC,
-                lower(nome) ASC
+            ORDER BY lower(nome) ASC
         """)
 
         dados = cur.fetchall()

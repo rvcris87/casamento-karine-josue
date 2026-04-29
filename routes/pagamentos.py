@@ -201,10 +201,10 @@ def criar_pagamento_mercado_pago(
         }
 
     if presente.get("status") == "indisponivel":
-        logger.warning("Presente %s ja foi presenteado", presente_id)
+        logger.warning("Tentativa de pagamento para presente indisponivel: %s", presente_id)
         return {
             "sucesso": False,
-            "erro": "Este presente ja foi presenteado",
+            "erro": "Este presente esta indisponivel no momento",
         }
 
     try:
