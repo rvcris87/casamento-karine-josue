@@ -9,7 +9,10 @@ from db import (
     alternar_status_presente,
     alternar_destaque_foto,
     excluir_foto,
-    get_todos_rsvp
+    get_todos_rsvp,
+    get_rsvp_por_id,
+    atualizar_rsvp,
+    excluir_rsvp
 )
 
 load_dotenv()
@@ -103,3 +106,71 @@ def remover_foto(foto_id):
 def admin_rsvp():
     lista_rsvp = get_todos_rsvp()
     return render_template("admin_rsvp.html", lista_rsvp=lista_rsvp)
+
+
+def _parse_quantidade(valor):
+    try:
+        quantidade = int(valor) if valor else 0
+        return max(quantidade, 0)
+    except ValueError:
+        return 0
+
+
+@admin_bp.route("/rsvp/<int:rsvp_id>/editar", methods=["GET", "POST"])
+@login_required_admin
+def editar_rsvp(rsvp_id):
+    rsvp = get_rsvp_por_id(rsvp_id)
+    if not rsvp:
+        flash("Confirmacao de presenca nao encontrada.", "erro")
+        return redirect(url_for("admin.admin_rsvp"))
+
+    if request.method == "POST":
+        nome = request.form.get("nome_convidado", "").strip()
+        telefone = request.form.get("telefone", "").strip()
+        acompanhantes = _parse_quantidade(request.form.get("acompanhantes", "0").strip())
+        quantidade_criancas = _parse_quantidade(request.form.get("quantidade_criancas", "0").strip())
+        confirmacao = request.form.get("confirmacao", "").strip().lower()
+        observacao = request.form.get("observacao", "").strip()
+
+        if not nome:
+            flash("Informe o nome do convidado.", "erro")
+            return render_template("admin_rsvp_editar.html", rsvp=rsvp)
+
+        if confirmacao not in ("sim", "nao"):
+            flash("Selecione uma opcao valida de confirmacao.", "erro")
+            return render_template("admin_rsvp_editar.html", rsvp=rsvp)
+
+        try:
+            atualizado = atualizar_rsvp(
+                rsvp_id,
+                nome,
+                telefone,
+                acompanhantes,
+                quantidade_criancas,
+                confirmacao,
+                observacao
+            )
+            if atualizado:
+                flash("Confirmacao de presenca atualizada com sucesso.", "sucesso")
+            else:
+                flash("Confirmacao de presenca nao encontrada.", "erro")
+            return redirect(url_for("admin.admin_rsvp"))
+        except Exception:
+            flash("Nao foi possivel atualizar a confirmacao de presenca.", "erro")
+
+    return render_template("admin_rsvp_editar.html", rsvp=rsvp)
+
+
+@admin_bp.route("/rsvp/<int:rsvp_id>/excluir", methods=["POST"])
+@login_required_admin
+def remover_rsvp(rsvp_id):
+    try:
+        removido = excluir_rsvp(rsvp_id)
+        if removido:
+            flash("Confirmacao de presenca excluida com sucesso.", "sucesso")
+        else:
+            flash("Confirmacao de presenca nao encontrada.", "erro")
+    except Exception:
+        flash("Nao foi possivel excluir a confirmacao de presenca.", "erro")
+
+    return redirect(url_for("admin.admin_rsvp"))

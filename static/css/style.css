@@ -1404,6 +1404,37 @@ textarea {
     color: var(--text-soft);
 }
 
+.admin-table-actions {
+    display: grid;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.admin-table-actions form {
+    margin: 0;
+}
+
+.admin-edit-box {
+    width: min(760px, 100%);
+}
+
+.admin-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-form-actions .btn-outline {
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .admin-form-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* SEÇÃO NOSSA HISTÓRIA */
 .historia {
     padding: 40px 20px 90px 20px;

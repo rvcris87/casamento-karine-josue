@@ -594,3 +594,104 @@ def get_todos_rsvp():
     cur.close()
     conn.close()
     return lista
+
+
+def get_rsvp_por_id(rsvp_id):
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT id, nome_convidado, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao, created_at
+            FROM rsvp
+            WHERE id = %s
+        """, (rsvp_id,))
+
+        r = cur.fetchone()
+        if not r:
+            return None
+
+        return {
+            "id": r[0],
+            "nome_convidado": r[1],
+            "telefone": r[2],
+            "acompanhantes": r[3],
+            "quantidade_criancas": r[4],
+            "confirmacao": r[5],
+            "observacao": r[6],
+            "created_at": r[7],
+        }
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def atualizar_rsvp(rsvp_id, nome_convidado, telefone, acompanhantes, quantidade_criancas, confirmacao, observacao):
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            UPDATE rsvp
+            SET nome_convidado = %s,
+                telefone = %s,
+                acompanhantes = %s,
+                quantidade_criancas = %s,
+                confirmacao = %s,
+                observacao = %s
+            WHERE id = %s
+        """, (
+            nome_convidado,
+            telefone,
+            acompanhantes,
+            quantidade_criancas,
+            confirmacao,
+            observacao,
+            rsvp_id,
+        ))
+
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def excluir_rsvp(rsvp_id):
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            DELETE FROM rsvp
+            WHERE id = %s
+        """, (rsvp_id,))
+
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()

@@ -29,6 +29,7 @@
                     <th>Confirmação</th>
                     <th>Observação</th>
                     <th>Enviado em</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -46,6 +47,18 @@
                     </td>
                     <td>{{ item.observacao or '-' }}</td>
                     <td>{{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else '-' }}</td>
+                    <td>
+                        <div class="admin-table-actions">
+                            <a href="{{ url_for('admin.editar_rsvp', rsvp_id=item.id) }}" class="btn-outline">Editar</a>
+                            <form method="POST" action="{{ url_for('admin.remover_rsvp', rsvp_id=item.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir esta confirmação?');">
+                                <button type="submit" class="btn-danger">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">Nenhuma confirmação de presença encontrada.</td>
                 </tr>
                 {% endfor %}
             </tbody>
