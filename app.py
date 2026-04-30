@@ -23,21 +23,17 @@ from routes.pagamentos import pagamentos_bp
 # Validacao de variaveis de ambiente criticas
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
-PAGBANK_TOKEN = os.getenv("PAGBANK_TOKEN")
-PAGBANK_ENV = os.getenv("PAGBANK_ENV", "production")
-PAGBANK_API_URL = os.getenv("PAGBANK_API_URL", "https://api.pagseguro.com")
+INFINITEPAY_HANDLE = os.getenv("INFINITEPAY_HANDLE", "").strip().lstrip("$")
+INFINITEPAY_API_URL = os.getenv("INFINITEPAY_API_URL", "https://api.checkout.infinitepay.io")
 
 
 # Validar DATABASE_URL (critico - aplicacao nao funciona sem)
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL nao configurada no .env - aplicacao nao pode iniciar")
 
-# Validar PagBank (critico - pagamentos nao funcionam sem)
-logger.info("PagBank token configurado: %s", "sim" if PAGBANK_TOKEN else "nao")
-logger.info("PagBank ambiente: %s, API URL: %s", PAGBANK_ENV, PAGBANK_API_URL)
-
-if not PAGBANK_TOKEN:
-    raise RuntimeError("PAGBANK_TOKEN nao configurado no .env - pagamentos desativados")
+# Validar InfinitePay (pagamentos dependem da InfiniteTag configurada)
+logger.info("InfinitePay handle configurado: %s", "sim" if INFINITEPAY_HANDLE else "nao")
+logger.info("InfinitePay API URL: %s", INFINITEPAY_API_URL)
 
 # Validar SECRET_KEY (critico - sessoes nao funcionam sem)
 if not SECRET_KEY:
