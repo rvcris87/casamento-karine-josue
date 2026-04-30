@@ -101,6 +101,31 @@ def extrair_ids_do_order_nsu(order_nsu):
     return ids
 
 
+def buscar_campo_recursivo(data, nomes):
+    if isinstance(nomes, str):
+        nomes = {nomes}
+    else:
+        nomes = set(nomes)
+
+    if isinstance(data, dict):
+        for nome in nomes:
+            if nome in data and data[nome] not in (None, ""):
+                return data[nome]
+
+        for valor in data.values():
+            encontrado = buscar_campo_recursivo(valor, nomes)
+            if encontrado not in (None, ""):
+                return encontrado
+
+    if isinstance(data, list):
+        for item in data:
+            encontrado = buscar_campo_recursivo(item, nomes)
+            if encontrado not in (None, ""):
+                return encontrado
+
+    return None
+
+
 def extrair_checkout_url_infinitepay(checkout):
     """Extrai o link de checkout aceitando formatos comuns de resposta da API."""
     if isinstance(checkout, str) and checkout.startswith("http"):
@@ -246,6 +271,12 @@ def salvar_pagamento_no_banco(
 
         pagamento_id = cur.fetchone()[0]
         conn.commit()
+        logger.info(
+            "Pagamento salvo: tabela=%s, pagamento_id=%s, presente_id=%s, status=iniciado",
+            table_config["table"],
+            pagamento_id,
+            presente_id,
+        )
         return pagamento_id
     except Exception as e:
         if conn:
@@ -408,8 +439,12 @@ def criar_pagamento_infinitepay(
             "erro": "Presente nao encontrado",
         }
 
-    if presente.get("status") == "indisponivel":
-        logger.warning("Tentativa de pagamento para presente indisponivel: %s", presente_id)
+    if presente.get("status") != "disponivel":
+        logger.warning(
+            "Tentativa de pagamento bloqueada: presente_id=%s, status=%s",
+            presente_id,
+            presente.get("status"),
+        )
         return {
             "sucesso": False,
             "erro": "Este presente esta indisponivel no momento",
@@ -488,14 +523,43 @@ def atualizar_status_presente(presente_id, novo_status):
         cur = conn.cursor()
         cur.execute(
             """
-            UPDATE presentes
-            SET status = %s, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
-            """,
-            (novo_status, presente_id),
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'presentes'
+              AND column_name IN ('status', 'updated_at')
+            """
         )
+        colunas = {row[0] for row in cur.fetchall()}
+        if "status" not in colunas:
+            logger.error("Coluna status nao encontrada na tabela presentes")
+            return False
+
+        if "updated_at" in colunas:
+            cur.execute(
+                """
+                UPDATE presentes
+                SET status = %s, updated_at = NOW()
+                WHERE id = %s
+                """,
+                (novo_status, presente_id),
+            )
+        else:
+            cur.execute(
+                """
+                UPDATE presentes
+                SET status = %s
+                WHERE id = %s
+                """,
+                (novo_status, presente_id),
+            )
+
         conn.commit()
-        logger.info("Presente %s atualizado para status: %s", presente_id, novo_status)
+        if cur.rowcount == 0:
+            logger.error("Nenhum presente encontrado para atualizar: presente_id=%s", presente_id)
+            return False
+
+        logger.info("Presente marcado como %s: presente_id=%s", novo_status, presente_id)
         return True
     except psycopg2.Error as e:
         logger.error("Erro ao atualizar status do presente %s: %s", presente_id, e)
@@ -560,7 +624,10 @@ def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, met
                     UPDATE pagamentos_mercado_pago
                     SET status = %s, mercado_pago_id = %s, metodo_pagamento = %s,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE preferencia_id = %s OR id = %s OR init_point ILIKE %s
+                    WHERE preferencia_id = %s
+                       OR id = %s
+                       OR mercado_pago_id = %s
+                       OR init_point ILIKE %s
                     RETURNING presente_id
                     """,
                     (
@@ -569,6 +636,7 @@ def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, met
                         metodo or "desconhecido",
                         preferencia_id,
                         ids_order_nsu["pagamento_id"],
+                        mercado_pago_id_num,
                         f"%{preferencia_id}%",
                     ),
                 )
@@ -576,9 +644,23 @@ def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, met
         conn.commit()
 
         if resultado:
+            logger.info(
+                "Pagamento atualizado: referencia=%s, status=%s, presente_id=%s",
+                preferencia_id,
+                novo_status,
+                resultado["presente_id"],
+            )
             return {"presente_id": resultado["presente_id"]}
 
-        logger.warning("Pagamento com preferencia_id %s nao encontrado", preferencia_id)
+        if ids_order_nsu["presente_id"]:
+            logger.warning(
+                "Pagamento nao encontrado pela referencia %s, usando presente_id extraido do order_nsu: %s",
+                preferencia_id,
+                ids_order_nsu["presente_id"],
+            )
+            return {"presente_id": ids_order_nsu["presente_id"]}
+
+        logger.warning("Pagamento com referencia %s nao encontrado", preferencia_id)
         return {}
     except psycopg2.Error as e:
         logger.error("Erro ao atualizar pagamento %s: %s", preferencia_id, e)
@@ -634,11 +716,13 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
 
 
 def mapear_status_infinitepay(data):
-    if data.get("paid") is True:
+    pago = buscar_campo_recursivo(data, {"paid", "is_paid", "paid_out"})
+    if pago is True or str(pago).lower() == "true":
         return "approved"
 
-    status_normalizado = (data.get("status") or data.get("event") or data.get("type") or "").upper()
-    if status_normalizado in {"PAID", "AUTHORIZED", "APPROVED", "CAPTURED", "SUCCESS"}:
+    status = buscar_campo_recursivo(data, {"status", "event", "type", "payment_status"})
+    status_normalizado = str(status or "").upper()
+    if status_normalizado in {"PAID", "AUTHORIZED", "APPROVED", "CAPTURED", "SUCCESS", "COMPLETED", "CONCLUIDA"}:
         return "approved"
     if status_normalizado in {"WAITING", "IN_ANALYSIS", "PENDING", "ACTIVE"}:
         return "pending"
@@ -650,15 +734,28 @@ def mapear_status_infinitepay(data):
 
 
 def extrair_dados_webhook_infinitepay(data):
-    order_nsu = data.get("order_nsu") or data.get("reference_id")
-    status = data.get("status") or data.get("event") or data.get("type")
-    transaction_nsu = data.get("transaction_nsu") or data.get("payment_id")
-    slug = data.get("slug") or data.get("invoice_slug")
+    order_nsu = buscar_campo_recursivo(data, {
+        "order_nsu",
+        "orderNsu",
+        "reference_id",
+        "referenceId",
+        "reference",
+        "external_reference",
+    })
+    status = buscar_campo_recursivo(data, {"status", "event", "type", "payment_status"})
+    transaction_nsu = buscar_campo_recursivo(data, {
+        "transaction_nsu",
+        "transactionNsu",
+        "payment_id",
+        "paymentId",
+        "id",
+    })
+    slug = buscar_campo_recursivo(data, {"slug", "invoice_slug", "invoiceSlug", "checkout_slug"})
     pagamento_id = (
         transaction_nsu
         or slug
     )
-    metodo = data.get("capture_method") or data.get("payment_method") or "desconhecido"
+    metodo = buscar_campo_recursivo(data, {"capture_method", "payment_method", "paymentMethod"}) or "desconhecido"
 
     return {
         "checkout_id": order_nsu or transaction_nsu or slug,
@@ -783,6 +880,12 @@ def webhook_infinitepay():
         presente_id = resultado_update.get("presente_id")
 
         if status_pagamento == "approved" and presente_id:
+            logger.info(
+                "Pagamento aprovado recebido: referencia=%s, pagamento_id=%s",
+                checkout_id,
+                pagamento_id,
+            )
+            logger.info("Presente_id encontrado para pagamento aprovado: %s", presente_id)
             sucesso = atualizar_status_presente(presente_id, "indisponivel")
             if sucesso:
                 logger.info(
@@ -804,6 +907,19 @@ def webhook_infinitepay():
                     data,
                     f"Erro ao atualizar presente {presente_id}",
                 )
+        elif status_pagamento == "approved":
+            logger.error(
+                "Pagamento aprovado sem presente_id: referencia=%s, pagamento_id=%s",
+                checkout_id,
+                pagamento_id,
+            )
+            registrar_webhook_log(
+                pagamento_id,
+                tipo_notificacao,
+                "erro_presente_id",
+                data,
+                "Pagamento aprovado sem presente_id",
+            )
         elif status_pagamento in ["cancelled", "rejected"] and presente_id:
             sucesso = atualizar_status_presente(presente_id, "disponivel")
             if sucesso:
