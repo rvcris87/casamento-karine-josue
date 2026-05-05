@@ -89,7 +89,7 @@ def _montar_presentes(dados):
             "slug": p[2],
             "imagem": p[3],
             "valor": float(p[4]) if p[4] is not None else 0,
-            "status": p[5],
+            "status": p[5] or "disponivel",
             "destaque": p[6],
             "ordem": p[7],
         })
@@ -106,10 +106,10 @@ def get_presentes():
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT id, nome, slug, imagem, valor, status, destaque, ordem
+            SELECT id, nome, slug, imagem, valor, COALESCE(status, 'disponivel') AS status, destaque, ordem
             FROM presentes
             ORDER BY
-                CASE WHEN status = 'indisponivel' THEN 1 ELSE 0 END,
+                CASE WHEN COALESCE(status, 'disponivel') = 'indisponivel' THEN 1 ELSE 0 END,
                 lower(nome) ASC
         """)
 
@@ -133,16 +133,115 @@ def get_todos_presentes_admin():
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT id, nome, slug, imagem, valor, status, destaque, ordem
+            SELECT id, nome, slug, imagem, valor, COALESCE(status, 'disponivel') AS status, destaque, ordem
             FROM presentes
             ORDER BY
-                CASE WHEN status = 'disponivel' THEN 0 ELSE 1 END,
+                CASE WHEN COALESCE(status, 'disponivel') = 'disponivel' THEN 0 ELSE 1 END,
                 COALESCE(ordem, 9999) ASC,
                 lower(nome) ASC
         """)
 
         dados = cur.fetchall()
         return _montar_presentes(dados)
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _get_pagamentos_table_config(cur):
+    cur.execute("""
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name IN ('pagamentos_presentes', 'pagamentos_mercado_pago')
+    """)
+
+    tabelas = {}
+    for row in cur.fetchall():
+        if isinstance(row, dict):
+            table_name = row["table_name"]
+            column_name = row["column_name"]
+        else:
+            table_name, column_name = row
+        tabelas.setdefault(table_name, set()).add(column_name)
+
+    if "pagamentos_presentes" in tabelas:
+        return {"table": "pagamentos_presentes", "columns": tabelas["pagamentos_presentes"]}
+    if "pagamentos_mercado_pago" in tabelas:
+        return {"table": "pagamentos_mercado_pago", "columns": tabelas["pagamentos_mercado_pago"]}
+    return None
+
+
+def _col_expr(columns, alias, candidates, default_sql="NULL"):
+    for column in candidates:
+        if column in columns:
+            return f"pg.{column} AS {alias}"
+    return f"{default_sql} AS {alias}"
+
+
+def get_presentes_recebidos_admin():
+    """Busca pagamentos de presentes com dados do convidado para o painel admin."""
+    conn = None
+    cur = None
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        table_config = _get_pagamentos_table_config(cur)
+        if not table_config:
+            logger.warning("Nenhuma tabela de pagamentos encontrada para o painel admin.")
+            return []
+
+        table = table_config["table"]
+        columns = table_config["columns"]
+
+        status_expr = _col_expr(columns, "status_pagamento", ("status_pagamento", "status"), "'pending'")
+        nome_expr = _col_expr(columns, "nome_convidado", ("nome_convidado", "nome_pagador", "nome"), "''")
+        telefone_expr = _col_expr(
+            columns,
+            "telefone_convidado",
+            ("telefone_convidado", "telefone_pagador", "telefone", "whatsapp"),
+            "''",
+        )
+        mensagem_expr = _col_expr(columns, "mensagem", ("mensagem", "mensagem_pagador", "observacao"), "''")
+        valor_expr = _col_expr(columns, "valor", ("valor", "valor_pago", "amount"), "p.valor")
+        payment_id_expr = _col_expr(
+            columns,
+            "payment_id",
+            ("payment_id", "mercado_pago_id", "transaction_id", "transaction_nsu"),
+            "pg.id",
+        )
+        external_reference_expr = _col_expr(
+            columns,
+            "external_reference",
+            ("external_reference", "preferencia_id", "reference_id", "order_nsu"),
+            "pg.id::text",
+        )
+        created_at_expr = _col_expr(columns, "created_at", ("created_at",), "NULL")
+        order_expr = "pg.created_at DESC NULLS LAST, pg.id DESC" if "created_at" in columns else "pg.id DESC"
+
+        cur.execute(f"""
+            SELECT
+                pg.id,
+                pg.presente_id,
+                p.nome AS nome_presente,
+                {valor_expr},
+                {nome_expr},
+                {telefone_expr},
+                {mensagem_expr},
+                {status_expr},
+                {payment_id_expr},
+                {external_reference_expr},
+                {created_at_expr}
+            FROM {table} pg
+            LEFT JOIN presentes p ON p.id = pg.presente_id
+            ORDER BY {order_expr}
+        """)
+
+        return [dict(row) for row in cur.fetchall()]
 
     finally:
         if cur:
@@ -165,12 +264,12 @@ def alternar_status_presente(presente_id):
         if not resultado:
             return None
 
-        status_atual = resultado[0]
+        status_atual = resultado[0] or "disponivel"
         novo_status = "disponivel" if status_atual == "indisponivel" else "indisponivel"
 
         cur.execute("""
             UPDATE presentes
-            SET status = %s
+            SET status = %s, updated_at = NOW()
             WHERE id = %s
         """, (novo_status, presente_id))
 

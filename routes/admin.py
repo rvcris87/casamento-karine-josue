@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from db import (
     get_todas_fotos,
     get_todos_presentes_admin,
+    get_presentes_recebidos_admin,
     alternar_status_presente,
     alternar_destaque_foto,
     excluir_foto,
@@ -68,6 +69,16 @@ def admin_fotos():
 def admin_presentes():
     presentes = get_todos_presentes_admin()
     return render_template("admin_presentes.html", presentes=presentes)
+
+
+@admin_bp.route("/presentes-recebidos")
+@login_required_admin
+def admin_presentes_recebidos():
+    presentes_recebidos = get_presentes_recebidos_admin()
+    return render_template(
+        "admin_presentes_recebidos.html",
+        presentes_recebidos=presentes_recebidos
+    )
 
 
 @admin_bp.route("/presentes/<int:presente_id>/status", methods=["POST"])

@@ -11,6 +11,7 @@
 
         <div class="admin-top-actions">
             <a href="{{ url_for('admin.admin_presentes') }}" class="btn-outline">Ver presentes</a>
+            <a href="{{ url_for('admin.admin_presentes_recebidos') }}" class="btn-outline">Ver presentes recebidos</a>
             <a href="{{ url_for('admin.admin_rsvp') }}" class="btn-outline">Ver RSVPs</a>
 
             <form method="POST" action="{{ url_for('admin.logout_admin') }}" class="logout-form">

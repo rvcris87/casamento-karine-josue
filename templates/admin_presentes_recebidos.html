@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Admin | Presentes recebidos{% endblock %}
+
+{% block content %}
+<section class="admin-page">
+    <div class="admin-header">
+        <p class="eyebrow">Painel administrativo</p>
+        <h1>Presentes recebidos</h1>
+        <p>Veja quem enviou cada presente e acompanhe o status do pagamento.</p>
+
+        <div class="admin-top-actions">
+            <a href="{{ url_for('admin.admin_presentes') }}" class="btn-outline">Ver lista de presentes</a>
+            <a href="{{ url_for('admin.admin_fotos') }}" class="btn-outline">Ver fotos</a>
+            <a href="{{ url_for('admin.admin_rsvp') }}" class="btn-outline">Ver RSVPs</a>
+
+            <form method="POST" action="{{ url_for('admin.logout_admin') }}" class="logout-form">
+                <button type="submit" class="btn-outline">Sair do painel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Quem enviou</th>
+                    <th>Telefone</th>
+                    <th>Presente</th>
+                    <th>Valor</th>
+                    <th>Mensagem</th>
+                    <th>Status</th>
+                    <th>Pagamento</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in presentes_recebidos %}
+                <tr>
+                    <td>{{ item.nome_convidado or "Não informado" }}</td>
+                    <td>{{ item.telefone_convidado or "Não informado" }}</td>
+                    <td>{{ item.nome_presente or ("Presente #" ~ item.presente_id) }}</td>
+                    <td>{{ item.valor | brl }}</td>
+                    <td>{{ item.mensagem or "-" }}</td>
+                    <td>
+                        {% if item.status_pagamento == 'approved' %}
+                        <span class="status-badge status-aprovado">Aprovado</span>
+                        {% elif item.status_pagamento in ['pending', 'pendente'] %}
+                        <span class="status-badge status-pendente">Pendente</span>
+                        {% else %}
+                        <span class="status-badge status-rejeitado">{{ item.status_pagamento or "Indefinido" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.payment_id or item.external_reference or "-" }}</td>
+                    <td>{{ item.created_at or "-" }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">Nenhum presente recebido ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

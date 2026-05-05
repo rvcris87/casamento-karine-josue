@@ -27,6 +27,8 @@ INFINITEPAY_API_URL = os.getenv(
 INFINITEPAY_HANDLE = os.getenv("INFINITEPAY_HANDLE", "").strip().lstrip("$")
 
 pagamentos_bp = Blueprint("pagamentos", __name__)
+STATUS_PAGAMENTO_APROVADO = "approved"
+STATUS_PRESENTE_INDISPONIVEL = "indisponivel"
 
 
 def get_infinitepay_headers():
@@ -554,12 +556,13 @@ def atualizar_status_presente(presente_id, novo_status):
                 (novo_status, presente_id),
             )
 
-        conn.commit()
         if cur.rowcount == 0:
+            conn.rollback()
             logger.error("Nenhum presente encontrado para atualizar: presente_id=%s", presente_id)
             return False
 
-        logger.info("Presente marcado como %s: presente_id=%s", novo_status, presente_id)
+        conn.commit()
+        logger.info("Presente atualizado para %s: presente_id=%s", novo_status, presente_id)
         return True
     except psycopg2.Error as e:
         logger.error("Erro ao atualizar status do presente %s: %s", presente_id, e)
@@ -571,6 +574,23 @@ def atualizar_status_presente(presente_id, novo_status):
             cur.close()
         if conn:
             conn.close()
+
+
+def marcar_presente_indisponivel_por_pagamento(presente_id, referencia, pagamento_id, origem):
+    """Marca o presente como indisponivel somente apos confirmacao real de pagamento."""
+    logger.info(
+        "Pagamento aprovado: origem=%s, referencia=%s, pagamento_id=%s",
+        origem,
+        referencia,
+        pagamento_id,
+    )
+    logger.info("Presente_id encontrado para pagamento aprovado: %s", presente_id)
+    sucesso = atualizar_status_presente(presente_id, STATUS_PRESENTE_INDISPONIVEL)
+    if sucesso:
+        logger.info("Presente atualizado para indisponivel: presente_id=%s", presente_id)
+    else:
+        logger.error("Erro ao atualizar presente %s para indisponivel", presente_id)
+    return sucesso
 
 
 def atualizar_pagamento_status(preferencia_id, mercado_pago_id, novo_status, metodo=None):
@@ -718,17 +738,56 @@ def registrar_webhook_log(mercado_pago_id, tipo_notificacao, status, dados_json,
 def mapear_status_infinitepay(data):
     pago = buscar_campo_recursivo(data, {"paid", "is_paid", "paid_out"})
     if pago is True or str(pago).lower() == "true":
-        return "approved"
+        return STATUS_PAGAMENTO_APROVADO
 
     status = buscar_campo_recursivo(data, {"status", "event", "type", "payment_status"})
     status_normalizado = str(status or "").upper()
-    if status_normalizado in {"PAID", "AUTHORIZED", "APPROVED", "CAPTURED", "SUCCESS", "COMPLETED", "CONCLUIDA"}:
-        return "approved"
-    if status_normalizado in {"WAITING", "IN_ANALYSIS", "PENDING", "ACTIVE"}:
+    tokens = set(
+        status_normalizado
+        .replace(".", " ")
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace("/", " ")
+        .split()
+    )
+
+    if status_normalizado in {
+        "PAID",
+        "AUTHORIZED",
+        "APPROVED",
+        "CAPTURED",
+        "SUCCESS",
+        "SUCCESSFUL",
+        "COMPLETED",
+        "CONCLUIDA",
+    } or tokens.intersection({
+        "PAID",
+        "AUTHORIZED",
+        "APPROVED",
+        "CAPTURED",
+        "SUCCESS",
+        "SUCCESSFUL",
+        "COMPLETED",
+        "CONCLUIDA",
+    }):
+        return STATUS_PAGAMENTO_APROVADO
+    if status_normalizado in {"WAITING", "IN_ANALYSIS", "PENDING", "ACTIVE"} or tokens.intersection({
+        "WAITING",
+        "IN",
+        "ANALYSIS",
+        "PENDING",
+        "ACTIVE",
+    }):
         return "pending"
-    if status_normalizado in {"CANCELED", "CANCELLED", "DECLINED", "VOIDED", "EXPIRED"}:
+    if status_normalizado in {"CANCELED", "CANCELLED", "DECLINED", "VOIDED", "EXPIRED"} or tokens.intersection({
+        "CANCELED",
+        "CANCELLED",
+        "DECLINED",
+        "VOIDED",
+        "EXPIRED",
+    }):
         return "cancelled"
-    if status_normalizado in {"DENIED", "REJECTED"}:
+    if status_normalizado in {"DENIED", "REJECTED"} or tokens.intersection({"DENIED", "REJECTED"}):
         return "rejected"
     return "pending"
 
@@ -879,19 +938,14 @@ def webhook_infinitepay():
         )
         presente_id = resultado_update.get("presente_id")
 
-        if status_pagamento == "approved" and presente_id:
-            logger.info(
-                "Pagamento aprovado recebido: referencia=%s, pagamento_id=%s",
+        if status_pagamento == STATUS_PAGAMENTO_APROVADO and presente_id:
+            sucesso = marcar_presente_indisponivel_por_pagamento(
+                presente_id,
                 checkout_id,
                 pagamento_id,
+                "webhook_infinitepay",
             )
-            logger.info("Presente_id encontrado para pagamento aprovado: %s", presente_id)
-            sucesso = atualizar_status_presente(presente_id, "indisponivel")
             if sucesso:
-                logger.info(
-                    "Presente %s marcado como indisponivel (pagamento aprovado)",
-                    presente_id,
-                )
                 registrar_webhook_log(
                     pagamento_id,
                     tipo_notificacao,
@@ -907,7 +961,7 @@ def webhook_infinitepay():
                     data,
                     f"Erro ao atualizar presente {presente_id}",
                 )
-        elif status_pagamento == "approved":
+        elif status_pagamento == STATUS_PAGAMENTO_APROVADO:
             logger.error(
                 "Pagamento aprovado sem presente_id: referencia=%s, pagamento_id=%s",
                 checkout_id,
@@ -920,16 +974,13 @@ def webhook_infinitepay():
                 data,
                 "Pagamento aprovado sem presente_id",
             )
-        elif status_pagamento in ["cancelled", "rejected"] and presente_id:
-            sucesso = atualizar_status_presente(presente_id, "disponivel")
-            if sucesso:
-                logger.info(
-                    "Presente %s marcado como disponivel (pagamento %s)",
-                    presente_id,
-                    status_pagamento,
-                )
-            else:
-                logger.error("Erro ao atualizar presente %s para disponivel", presente_id)
+        else:
+            logger.info(
+                "Pagamento nao aprovado; presente nao alterado: referencia=%s, status=%s, presente_id=%s",
+                checkout_id,
+                status_pagamento,
+                presente_id,
+            )
 
         return jsonify({"recebido": True}), 200
     except Exception as e:
@@ -946,17 +997,34 @@ def pagamento_sucesso():
     if order_nsu and transaction_nsu and slug:
         try:
             resultado = consultar_pagamento_infinitepay(order_nsu, transaction_nsu, slug)
-            if resultado and resultado.get("paid") is True:
+            status_pagamento = mapear_status_infinitepay(resultado or {})
+            if resultado and status_pagamento == STATUS_PAGAMENTO_APROVADO:
                 update = atualizar_pagamento_status(
                     order_nsu,
                     transaction_nsu,
-                    "approved",
+                    STATUS_PAGAMENTO_APROVADO,
                     resultado.get("capture_method"),
                 )
                 presente_id = update.get("presente_id")
                 if presente_id:
-                    atualizar_status_presente(presente_id, "indisponivel")
-                    logger.info("Pagamento InfinitePay confirmado no retorno: order_nsu=%s", order_nsu)
+                    marcar_presente_indisponivel_por_pagamento(
+                        presente_id,
+                        order_nsu,
+                        transaction_nsu,
+                        "retorno_sucesso_infinitepay",
+                    )
+                else:
+                    logger.error(
+                        "Pagamento aprovado sem presente_id no retorno: order_nsu=%s, transaction_nsu=%s",
+                        order_nsu,
+                        transaction_nsu,
+                    )
+            else:
+                logger.info(
+                    "Retorno de sucesso sem pagamento aprovado confirmado: order_nsu=%s, status=%s",
+                    order_nsu,
+                    status_pagamento,
+                )
         except Exception as e:
             logger.warning("Nao foi possivel confirmar pagamento no retorno InfinitePay: %s", e)
 
@@ -984,7 +1052,7 @@ def status_pagamento_endpoint(presente_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
             """
-            SELECT status FROM presentes WHERE id = %s
+            SELECT COALESCE(status, 'disponivel') AS status FROM presentes WHERE id = %s
             """,
             (presente_id,),
         )
